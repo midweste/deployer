@@ -5,12 +5,12 @@
 Add to your _deploy.php_
 
 ```php
-require 'contrib/filehardening.php';
+require 'contrib/hardening.php';
 ```
 
 ## Configuration
-- `dir_permissions`,
-- `file_permissions`
+- `harden_dir_permissions`, Permission to set directorys to when hardening. Defaults to u=rx,g=rx,o=rx
+- `harden_file_permissions` Permission to set files to when hardening. Defaults to u=r,g=r,o=r
 
 ## Usage
 
@@ -24,31 +24,67 @@ before('deploy:publish', 'deploy:harden');
 
 namespace Deployer;
 
-function filesHarden(string $path, string $directoryPerms = 'u=rx,g=rx,o=rx', string $filePerms = 'u=r,g=r,o=r'): void
+set('harden_dir_permissions', 'u=rx,g=rx,o=rx');
+set('harden_file_permissions', 'u=r,g=r,o=r');
+
+class ServerHardening
 {
-    $find = which('find');
-    $test = which('test');
-    $chmod = which('chmod');
 
-    $dPerms = get('dir_permissions', $directoryPerms);
-    $fPerms = get('file_permissions', $filePerms);
+    public function chmodFilesCommand(string $path, string $filePerms = 'u=r,g=r,o=r'): string
+    {
+        $find = which('find');
+        $test = which('test');
+        $chmod = which('chmod');
 
-    $dcommand = "$test -d $path && $find $path -type d -exec $chmod $dPerms '{}' \;";
-    run($dcommand);
-    $fcommand = "$test -d $path/. && $find $path -type f -exec $chmod $fPerms '{}' \;";
-    run($fcommand);
+        $command = "$test -d $path/. && $find $path -type f -exec $chmod $filePerms '{}' \;";
+        return $command;
+    }
+
+    public function chmodDirectoryCommand(string $path, string $directoryPerms = 'u=rx,g=rx,o=rx'): string
+    {
+        $find = which('find');
+        $test = which('test');
+        $chmod = which('chmod');
+
+        $command = "$test -d $path && $find $path -type d -exec $chmod $directoryPerms '{}' \;";
+        return $command;
+    }
+
+    public function harden(string $path, string $directoryPerms, string $filePerms): void
+    {
+        $dcommand = $this->chmodDirectoryCommand($path, $directoryPerms);
+        $fcommand = $this->chmodFilesCommand($path, $filePerms);
+        writeln("$dcommand && $fcommand");
+        //run("$dcommand && $fcommand");
+    }
+
+    public function unharden(string $path, string $filePerms = 'u+rwx,g+rwx'): void
+    {
+        $test = which('test');
+        $chmod = which('chmod');
+        $command = "$test -d $path && $chmod -R $filePerms $path";
+        writeln($command);
+        //run($command);
+    }
 }
 
-function filesUnhardenCommand(string $path, string $filePerms = 'u+rwx,g+rwx'): string
+function harden(string $path): void
 {
-    $test = which('test');
-    $chmod = which('chmod');
-    $command = "$test -d $path && $chmod -R $filePerms $path";
-    return $command;
+    $dirPerms = get('harden_dir_permissions', 'u=rx,g=rx,o=rx');
+    $filePerms = get('harden_file_permissions', 'u=r,g=r,o=r');
+
+    $server = new ServerHardening;
+    $server->harden($path, $dirPerms, $filePerms);
+}
+
+function unharden(string $path): void
+{
+    $server = new ServerHardening;
+    $server->unharden($path);
 }
 
 task('deploy:harden', function () {
-    filesHarden('{{release_path}}');
+    harden('{{release_path}}');
 })->desc('Hardens site permissions');
 
 /* ----------------- Task Overrides ----------------- */
@@ -73,9 +109,7 @@ task('deploy:cleanup', function () {
 
     foreach ($releases as $release) {
         // Unharden permissions before removal
-        $command = filesUnhardenCommand("{{deploy_path}}/releases/$release");
-        //$command = "test -d {{deploy_path}}/releases/$release && chmod -R u+rwx {{deploy_path}}/releases/$release";
-        run($command, $runOpts);
+        unharden("{{deploy_path}}/releases/$release");
 
         run("$sudo rm -rf {{deploy_path}}/releases/$release", $runOpts);
     }
@@ -104,9 +138,8 @@ task('rollback', function () {
     writeln("Rolling back to <info>$candidate</info> release.");
 
     // Unharden permissions before removal
-    $command = filesUnhardenCommand("{{deploy_path}}/releases/$currentRelease");
-    //$command = "test -d {{deploy_path}}/releases/{$releases[0]} && chmod -R u+rwx {{deploy_path}}/releases/{$releases[0]}";
-    run($command);
+    $server = new ServerHardening();
+    $server->unharden("{{deploy_path}}/releases/$currentRelease");
 
     // Symlink to old release.
     run("{{bin/symlink}} releases/$candidate {{current_path}}");

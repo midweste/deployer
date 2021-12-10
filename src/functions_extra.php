@@ -10,16 +10,6 @@ use Deployer\Utility\Httpie;
 
 /* ----------------- Helper Functions ----------------- */
 
-function debug($variable): void
-{
-    writeln(var_export($variable, true));
-}
-
-function debugEnabled(): bool
-{
-    return get('debug', false);
-}
-
 /**
  * Copy of which but ran locally
  *
@@ -28,8 +18,7 @@ function debugEnabled(): bool
  */
 function whichLocal(string $name): string
 {
-    $dryRun = get('dry-run', false) || input()->getOption('dry-run');
-    if ($dryRun) {
+    if (get('dry-run', false) || input()->getOption('dry-run')) {
         return $name;
     }
 
@@ -118,7 +107,7 @@ function slack(string $template, $success = false): void
         'mrkdwn_in' => ['text'],
     ];
 
-    if (get('debug', false)) {
+    if (get('dry-run', false) || input()->getOption('dry-run')) {
         writeln(var_export($attachment, true));
         return;
     }
