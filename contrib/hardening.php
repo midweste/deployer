@@ -54,8 +54,7 @@ class ServerHardening
     {
         $dcommand = $this->chmodDirectoryCommand($path, $directoryPerms);
         $fcommand = $this->chmodFilesCommand($path, $filePerms);
-        writeln("$dcommand && $fcommand");
-        //run("$dcommand && $fcommand");
+        run("$dcommand && $fcommand");
     }
 
     public function unharden(string $path, string $filePerms = 'u+rwx,g+rwx'): void
@@ -63,8 +62,7 @@ class ServerHardening
         $test = which('test');
         $chmod = which('chmod');
         $command = "$test -d $path && $chmod -R $filePerms $path";
-        writeln($command);
-        //run($command);
+        run($command);
     }
 }
 
@@ -85,6 +83,10 @@ function unharden(string $path): void
 
 task('deploy:harden', function () {
     harden('{{release_path}}');
+})->desc('Hardens site permissions');
+
+task('deploy:unharden', function () {
+    unharden('{{release_path}}');
 })->desc('Hardens site permissions');
 
 /* ----------------- Task Overrides ----------------- */
