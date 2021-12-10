@@ -17,7 +17,8 @@ require 'contrib/hardening.php';
 Set hardened permissions on source files and folders
 
 ```php
-before('deploy:publish', 'deploy:harden');
+before('deploy:publish', 'deploy:harden'); // Harden permissions before releasing
+before('deploy:cleanup', 'deploy:unharden'); // Need to unharden permissions to allow old release removal
 ```
 
  */
@@ -105,5 +106,3 @@ task('deploy:unharden', function () {
         unharden("{{deploy_path}}/releases/$release");
     }
 })->desc('Unhardens old releases before deploy:cleanup to allow removal of read only files/dirs');
-
-before('deploy:cleanup', 'deploy:unharden');

@@ -45,9 +45,10 @@ task('deploy:clear_server_paths', function () {
     $commands = [];
     foreach ($paths as $path) {
         if (strpos($path, '/') !== 0) {
-            throw error(sprintf('Path %s is not absolute', $path));
+            warning(parse("Path \"$path\" is not absolute."));
+            continue;
         }
-        if (test("[ -d $path ]")) {
+        if (!test("[ -d $path ]")) {
             warning(parse("Path \"$path\" not found."));
             continue;
         }
