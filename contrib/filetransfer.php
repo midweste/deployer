@@ -9,12 +9,12 @@ require 'contrib/filetransfer.php';
 ```
 
 ## Configuration
-- ``,
-- ``
+- `filetransfer_rsync_switches`, Switches for rsync file transfer
+- `filetransfer_rsync_excludes` Array of excludes for rsync
 
 ## Usage
 
-Transfer files via rsync between server instances
+Transfer shared writable files via rsync between server instances
 
 ```php
 
@@ -27,37 +27,49 @@ namespace Deployer;
 use Deployer\Host\Host;
 use Deployer\Host\Localhost;
 
+set('filetransfer_rsync_switches', '-rlztv --progress --size-only --ipv4 --delete');
+set('filetransfer_rsync_excludes', []);
+
 class FileTransfer
 {
 
-    public function rsyncCommand(Host $source, string $source_path, Host $destination, string $destination_path, bool $local = true): string
+    public function rsyncCommand(Host $source, string $sourcePath, Host $destination, string $destinationPath, bool $local = true): string
     {
-        $rsync = whichContextual('rsync', $local);
-        $switches = get('staging_rsync_switches', '-rlztv --progress --size-only --ipv4 --delete');  # --delete-after? --delete-before?
 
-        $rsync_excludes = get('staging_rsync_excludes', []);
+        if (hostsAreSame($source, $destination)) {
+            throw error("Hosts source and destination cannot be the same host when pulling files");
+        }
+
+        if (hostsAreRemote($source, $destination) && !hostsOnSameServer($source, $destination)) {
+            throw error("Hosts source and destination cannot be remote and on different servers");
+        }
+
+        $rsync = whichContextual('rsync', $local);
+        $switches = get('filetransfer_rsync_switches', '-rlztv --progress --size-only --ipv4 --delete');  # --delete-after? --delete-before?
+
+        $rsyncExcludes = get('filetransfer_rsync_excludes', []);
         $excludes = '';
-        if (!empty($rsync_excludes)) {
-            foreach ($rsync_excludes as $exclude) {
+        if (!empty($rsyncExcludes)) {
+            foreach ($rsyncExcludes as $exclude) {
                 $excludes .= " --exclude \"$exclude\"";
             }
         }
 
         // source
-        $sourceUri = $source->getRemoteUser() . '@' . $source->getHostname() . ':' . parse($source_path);
+        $sourceUri = $source->getRemoteUser() . '@' . $source->getHostname() . ':' . parse($sourcePath);
         $port = '';
         if ($source instanceof Localhost || hostsOnSameServer($source, $destination)) {
-            $sourceUri = parse($source_path);
+            $sourceUri = parse($sourcePath);
         } else {
             $port = "-e \"ssh -p " . $source->getPort() . "\"";
-            $sourceUri = $source->getRemoteUser() . '@' . $source->getHostname() . ':' . parse($source_path);
+            $sourceUri = $source->getRemoteUser() . '@' . $source->getHostname() . ':' . parse($sourcePath);
         }
 
         // destination
         if ($destination instanceof Localhost || hostsOnSameServer($source, $destination)) {
-            $destinationUri = parse($destination_path);
+            $destinationUri = parse($destinationPath);
         } else {
-            $destinationUri = $destination->getRemoteUser() . '@' . $destination->getHostname() . ':' . parse($destination_path);
+            $destinationUri = $destination->getRemoteUser() . '@' . $destination->getHostname() . ':' . parse($destinationPath);
         }
 
         $command = "$rsync $port $switches $excludes $sourceUri $destinationUri";
@@ -66,10 +78,6 @@ class FileTransfer
 
     public function pullSharedWritable(Host $source, Host $destination): void
     {
-        if (hostsAreSame($source, $destination)) {
-            throw error("Hosts source and destination cannot be the same when pulling files");
-        }
-
         $writable = get('writable_dirs', []);
         $shared = get('shared_dirs', []);
         $sharedWritable = array_intersect($shared, $writable);
@@ -79,18 +87,35 @@ class FileTransfer
             return;
         }
 
-        $sourcePath = parse($source->getDeployPath());
-        $localPath = parse($destination->getDeployPath());
-
         foreach ($sharedWritable as $dir) {
             $dir = parse($dir);
-            $absSource = $sourcePath . '/current/' . $dir . '/';
-            $absDestination = $localPath . '/' .  $dir . '/';
-            $rsyncCommand = $this->rsyncCommand($source, $absSource, $destination, $absDestination);
-            runLocally($rsyncCommand);
+            $sourceAbsPath = hostCurrentDir($source) . '/' . $dir . '/';
+            $destAbsPath = hostCurrentDir($destination) . '/' . $dir . '/';
+
+            if (hostsAreRemote($source, $destination)) {
+                $rsyncCommand = $this->rsyncCommand($source, $sourceAbsPath, $destination, $destAbsPath, false);
+                run($rsyncCommand);
+            } else {
+                $rsyncCommand = $this->rsyncCommand($source, $sourceAbsPath, $destination, $destAbsPath, true);
+                runLocally($rsyncCommand);
+            }
         }
     }
 }
+
+task('test:files:pull', function () {
+    $dryrun = get('dry-run');
+    set('dry-run', true);
+
+    $server = new FileTransfer();
+    writeln('Pull to localhost from remote server');
+    $server->pullSharedWritable(currentHost(), hostLocalhost());
+
+    writeln('Pull to remote server from remote server');
+    $server->pullSharedWritable(currentHost(), hostFromStage('staging'));
+
+    set('dry-run', $dryrun);
+})->desc('Tests local and remote file transfer');
 
 task('files:pull', function () {
     $server = new FileTransfer();

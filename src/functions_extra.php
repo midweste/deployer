@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Deployer;
 
 use Deployer\Host\Host;
+use Deployer\Host\HostCollection;
 use Deployer\Host\Localhost;
 use Deployer\Utility\Httpie;
 
@@ -47,6 +48,36 @@ function whichContextual(string $name, bool $local = true): string
     return ($local) ? whichLocal($name) : which($name);
 }
 
+/**
+ * Execute commands based on local or remote host.
+ *
+ * Examples:
+ *
+ * ```php
+ * $user = runOnHost($host, 'git config user.name');
+ * runOnHost($host, "echo $user");
+ * ```
+ *
+ * @param Host $host Host to use to determine run or runLocally
+ * @param string $command Command to run on localhost.
+ * @param array|null $options Array of options will override passed named arguments.
+ * @param int|null $timeout Sets the process timeout (max. runtime). The timeout in seconds (default: 300 sec, `null` to disable).
+ * @param int|null $idle_timeout Sets the process idle timeout (max. time since last output) in seconds.
+ * @param string|null $secret Placeholder `%secret%` can be used in command. Placeholder will be replaced with this value and will not appear in any logs.
+ * @param array|null $env Array of environment variables: `runLocally('echo $KEY', env: ['key' => 'value']);`
+ * @param string|null $shell Shell to run in. Default is `bash -s`.
+ *
+ * @throws RunException
+ */
+function runOnHost(Host $host, string $command, ?array $options = [], ?int $timeout = null, ?int $idle_timeout = null, ?string $secret = null, ?array $env = null, ?string $shell = null): string
+{
+    if ($host instanceof Localhost) {
+        runLocally($command, $options, $timeout, $idle_timeout, $secret, $env, $shell);
+    } else {
+        run($command, $options, $timeout, $idle_timeout, $secret, $env, $shell);
+    }
+}
+
 function hostFromAlias(string $alias): Host
 {
     $hosts = Deployer::get()->hosts;
@@ -57,6 +88,13 @@ function hostFromAlias(string $alias): Host
         }
     }
     throw new \RuntimeException("$alias alias is not defined");
+}
+
+function hostCurrentDir(Host $host): string
+{
+    $local = ($host instanceof Localhost) ? true : false;
+    $deployPath = parse($host->getDeployPath());
+    return ($local) ? $deployPath : $deployPath . '/current';
 }
 
 function hostLocalhost(): Host
@@ -74,6 +112,16 @@ function hostHasLabel(Host $host, string $label): bool
 {
     $labels = $host->getLabels();
     return (isset($labels[$label])) ? true : false;
+}
+
+function hosts(): HostCollection
+{
+    return Deployer::get()->hosts;
+}
+
+function hostsAreRemote(Host $host1, Host $host2): bool
+{
+    return (!$host1 instanceof Localhost && !$host2 instanceof Localhost) ? true : false;
 }
 
 function hostsOnSameServer(Host $host1, Host $host2): bool

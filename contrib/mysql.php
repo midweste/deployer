@@ -10,7 +10,7 @@ require 'contrib/mysql.php';
 
 ## Configuration
 - `mysql_dump_switches', mysqldump command line switches
-- `find_replace_table_exclusions', Array of tables to skip when doing a find replace
+- `mysql_find_replace_table_exclusions', Array of tables to skip when doing a find replace
 
 ## Host Configuration
 - `mysql_domain`,
@@ -19,7 +19,7 @@ require 'contrib/mysql.php';
 - `mysql_pass`,
 - `mysql_port`,
 - `mysql_user`,
-- `production`, Set production flag as true on production host to prevent any destructive actions from running on this host
+- `production`, Set production flag as true on production host to prevent any potentially destructive actions from running on this host
 
 ## Usage
 
@@ -36,21 +36,42 @@ namespace Deployer;
 use Deployer\Host\Host;
 
 set('mysql_dump_switches', '--max_allowed_packet=128M --single-transaction --quick --extended-insert --allow-keywords --events --routines --compress --extended-insert --create-options --add-drop-table --add-locks --no-tablespaces');
-set('find_replace_table_exclusions', ['wp_usermeta', 'wp_usermeta_copy']);
+set('mysql_find_replace_table_exclusions', ['wp_usermeta', 'wp_usermeta_copy']);
 
 class Mysql
 {
 
-    //private $host;
-
-    /**
-     * Mysql
-     *
-     * @param Host $commandHost This is the host from which all commands will be run
-     */
     public function __construct()
     {
-        // $this->host = $commandHost;
+        $this->validateHosts();
+    }
+
+    protected function validateHosts(): bool
+    {
+        $stages = [
+            'development',
+            'staging',
+            'production'
+        ];
+        $hosts = Deployer::get()->hosts;
+        $hasProduction = false;
+        foreach ($hosts as $host) {
+            $alias = $host->getAlias();
+            if (!$host->hasOwn('stage')) {
+                throw error('Stage option must be set for host ' . $alias);
+            }
+            $stage = $host->get('stage');
+            if (!in_array($stage, $stages)) {
+                throw error('Stage option must be one of [' . implode(', ', $stages) . '] for host ' . $alias);
+            }
+            if ($stage == 'production') {
+                $hasProduction = true;
+            }
+        }
+        if (!$hasProduction) {
+            throw error('At least one host stage option must be set to production');
+        }
+        return true;
     }
 
     protected function whichLocally(string $name): string
@@ -74,7 +95,7 @@ class Mysql
         return trim(str_replace("$name is", "", $path));
     }
 
-    public function isHostProduction(Host $host): bool
+    public function hostIsProduction(Host $host): bool
     {
         if ($host->getAlias() == 'production') {
             return true;
@@ -130,7 +151,7 @@ class Mysql
         $D = $this->hostCredentials($destination);
         $destHostPortUserPassword = "--host=\"$D->host\" --port=\"$D->port\" --user=\"$D->user\" --pass=\"$D->pass\"";
 
-        $tableExclusions = implode(',', get('find_replace_table_exclusions', ''));
+        $tableExclusions = implode(',', get('mysql_find_replace_table_exclusions', ''));
         if (!empty($tableExclusions)) {
             $tableExclusions = "--exclude-tables=\"$tableExclusions\"";
         }
@@ -190,7 +211,7 @@ class Mysql
      */
     public function clear(Host $host): void
     {
-        if ($this->isHostProduction($host)) {
+        if ($this->hostIsProduction($host)) {
             throw new \RuntimeException("Command cannot be run on production");
         }
 
