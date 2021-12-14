@@ -36,7 +36,7 @@ namespace Deployer;
 use Deployer\Host\Host;
 
 set('mysql_dump_switches', '--max_allowed_packet=128M --single-transaction --quick --extended-insert --allow-keywords --events --routines --compress --extended-insert --create-options --add-drop-table --add-locks --no-tablespaces');
-set('mysql_find_replace_table_exclusions', ['wp_usermeta', 'wp_usermeta_copy']);
+set('mysql_find_replace_table_exclusions', []);
 
 class Mysql
 {
