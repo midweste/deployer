@@ -43,6 +43,7 @@ class Mysql
 
     public function __construct()
     {
+        ini_set('max_execution_time', 0);
         $this->validateHosts();
     }
 
@@ -200,7 +201,7 @@ class Mysql
     public function backup(Host $source): void
     {
         $pullCommand = $this->backupCommand($source);
-        runLocally($pullCommand);
+        runLocally($pullCommand, ['timeout' => 0, 'idle_timeout' => 0]);
     }
 
     /**
@@ -254,7 +255,7 @@ class Mysql
     {
         $this->clear($destination);
         $pullCommand = $this->transferCommand($source, $destination);
-        runLocally($pullCommand, ['real_time_output' => true]);
+        runLocally($pullCommand, ['real_time_output' => true, 'timeout' => 0, 'idle_timeout' => 0]);
     }
 
     /**
@@ -267,7 +268,7 @@ class Mysql
     public function findReplace(Host $source, Host $destination): void
     {
         $replaceCommand = $this->findReplaceCommand($source, $destination);
-        runLocally($replaceCommand, ['real_time_output' => true]);
+        runLocally($replaceCommand, ['real_time_output' => true, 'timeout' => 0, 'idle_timeout' => 0]);
     }
 
     /**
@@ -308,6 +309,5 @@ task('db:replace', function () {
 
 task('db:pull-replace', function () {
     $mysql = new Mysql();
-    $mysql->pull(currentHost(), hostLocalhost());
-    $mysql->findReplace(currentHost(), hostLocalhost());
+    $mysql->pullReplace(currentHost(), hostLocalhost());
 })->desc('Pull db from a remote host to localhost using mysqldump and replace the host domain with the localhost domain in the local database');
