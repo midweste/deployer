@@ -10,7 +10,7 @@ require 'contrib/clearpaths.php';
 
 ## Configuration
 - `clear_server_paths`, Array of host paths to clear
-- `clear_server_use_sudo',
+- `clear_server_use_sudo', Whether to use sudo for clearing paths
 
 ## Usage
 
@@ -45,11 +45,11 @@ task('deploy:clear_server_paths', function () {
     $commands = [];
     foreach ($paths as $path) {
         if (strpos($path, '/') !== 0) {
-            warning(parse("Path \"$path\" is not absolute."));
+            warning(parse("Path \"$path\" is not absolute. Skipping"));
             continue;
         }
         if (!test("[ -d $path ]")) {
-            warning(parse("Path \"$path\" not found."));
+            warning(parse("Path \"$path\" not found. Skipping"));
             continue;
         }
         $commands[] = "$sudo rm -rf $path";

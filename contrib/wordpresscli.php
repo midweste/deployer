@@ -27,7 +27,7 @@ use Deployer\Host\Host;
 use Deployer\Host\Localhost;
 use Symfony\Component\Console\Input\InputOption;
 
-option('wp', null, InputOption::VALUE_REQUIRED, 'Tag to deploy');
+option('wp', null, InputOption::VALUE_REQUIRED, 'Command to execute via wp cli');
 
 class WordpressCli
 {
@@ -85,7 +85,7 @@ task('wp:cache:flush', function () {
     $wpcli = new WordpressCli(currentHost());
     $command = $wpcli->command('cache flush');
 
-    run($command, ['real_time_output' => true]);
+    run($command);
 })->desc('Clear wordpress cache');
 
 // function wpcliSitePath(Host $host): string
