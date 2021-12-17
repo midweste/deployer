@@ -90,6 +90,18 @@ function hostFromAlias(string $alias): Host
     throw new \RuntimeException("$alias alias is not defined");
 }
 
+function hostFromStage(string $stage): Host
+{
+    $hosts = Deployer::get()->hosts;
+    foreach ($hosts as $host) {
+        $hostStage = $host->get('stage');
+        if (trim(strtolower($stage)) == trim(strtolower($hostStage))) {
+            return $host;
+        }
+    }
+    throw new \RuntimeException("$stage stage is not defined");
+}
+
 function hostCurrentDir(Host $host): string
 {
     $local = ($host instanceof Localhost) ? true : false;
