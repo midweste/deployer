@@ -69,7 +69,7 @@ function whichContextual(string $name, bool $local = true): string
  *
  * @throws RunException
  */
-function runOnHost(Host $host, string $command, ?array $options = [], ?int $timeout = null, ?int $idle_timeout = null, ?string $secret = null, ?array $env = null, ?string $shell = null): string
+function runOnHost(Host $host, string $command, ?array $options = [], ?int $timeout = null, ?int $idle_timeout = null, ?string $secret = null, ?array $env = null, ?string $shell = null): void
 {
     if ($host instanceof Localhost) {
         runLocally($command, $options, $timeout, $idle_timeout, $secret, $env, $shell);
