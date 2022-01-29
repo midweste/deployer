@@ -37,8 +37,10 @@ Let's create a new VPS on Linode, DigitalOcean, Vultr, AWS, GCP, etc.
 Make sure the image is **Ubuntu 20.04 LTS** as this version is supported via 
 Deployer [provision](recipe/provision.md) recipe.
 
+:::tip
 Configure Reverse DNS or RDNS on your server. This will allow you to ssh into 
 server using the domain name instead of the IP address.
+:::
 
 Our **deploy.php** recipe contains host definition with few important params:
  - `remote_user` user's name for ssh connection,
@@ -74,7 +76,7 @@ Provision recipe going to do:
 - Install all needed packages for our website (acl, npm, git, etc),
 - Install php with all needed extensions,
 - Install and configure the database,
-- Install Caddy websertver and configure our website with SSL certificate,
+- Install Caddy webserver and configure our website with SSL certificate,
 - Configure ssh and firewall,
 - Setup **deployer** user.
 
