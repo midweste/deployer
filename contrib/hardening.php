@@ -60,10 +60,12 @@ class ServerHardening
 
     public function unharden(string $path, string $filePerms = 'u+rwx,g+rwx'): void
     {
-        $test = which('test');
+        //$test = which('test');
         $chmod = which('chmod');
-        $command = "$test -d $path && $chmod -R $filePerms $path";
-        run($command);
+        if (test("[ -d $path ]")) {
+            $command = "$chmod -R $filePerms $path";
+            run($command);
+        }
     }
 }
 
