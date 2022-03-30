@@ -87,6 +87,10 @@ task('deploy:harden', function () {
 })->desc('Hardens site permissions');
 
 task('deploy:unharden', function () {
+
+    // cleanup hanging release
+    unharden("{{deploy_path}}/release");
+
     $releases = get('releases_list');
     $keep = get('keep_releases');
     // $sudo = get('unharden_use_sudo') ? 'sudo' : '';
@@ -106,3 +110,8 @@ task('deploy:unharden', function () {
         unharden("{{deploy_path}}/releases/$release");
     }
 })->desc('Unhardens old releases before deploy:cleanup to allow removal of read only files/dirs');
+
+after('deploy:failed', function () {
+    // cleanup hanging release
+    unharden("{{deploy_path}}/release");
+});
