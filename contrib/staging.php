@@ -9,7 +9,7 @@ require 'contrib/staging.php';
 ```
 
 ## Configuration
-- ``,
+- ``, See configuration for contrib/mysql.php and contrib/filetransfer.php
 
 ## Usage
 
@@ -25,6 +25,11 @@ namespace Deployer;
 
 require_once __DIR__ . '/mysql.php';
 require_once __DIR__ . '/filetransfer.php';
+
+task('pull-all', [
+    'files:pull',
+    'db:pull-replace',
+])->desc('Pull db from a remote stage, replaces instances of domain in db, and pulls writable files');
 
 task('staging:files:pull', function () {
     $files = new FileTransfer();

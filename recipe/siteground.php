@@ -2,7 +2,7 @@
 
 namespace Deployer;
 
-require_once __DIR__ . '/composer.php';
+require_once __DIR__ . '/common.php';
 
 require_once __DIR__ . '/../contrib/clearserverpaths.php';
 require_once __DIR__ . '/../contrib/hardening.php';
@@ -66,28 +66,22 @@ set('bin/composer', function () {
 //     'deploy:success',
 // ]);
 
-// task('deploy', [
-//     'deploy:prepare',
-//     'deploy:vendors',
-//     'deploy:publish',
-// ])->desc('Deploys your project');
+task('deploy', [
+    'deploy:prepare',
+    'deploy:vendors',
+    'deploy:clear_paths',
+    'deploy:harden',
+    'deploy:publish',
+    'wp:cache:flush',
+    'deploy:pause',
+    'deploy:clear_server_paths',
+])->desc('Deploys your project');
 
 /**
  * Hooks
  */
-
-before('deploy:publish', [
-    'deploy:clear_paths',
-    'deploy:harden'
-]);
-
 before('deploy:cleanup', 'deploy:unharden');
-
-after('deploy:publish', [
-    'wp:cache:flush',
-    'deploy:pause',
-    'deploy:clear_server_paths',
-]);
-
-after('deploy:failed', 'deploy:unlock');
-after('deploy:failed', 'deploy:unharden');
+after('deploy:failed', function () {
+    invoke('deploy:unlock');
+    invoke('deploy:unharden');
+});
