@@ -109,7 +109,7 @@ Alternatively get a defined task.
 
 Arguments:
 - **name** `string` — Name of current task.
-- **body** `callable|array|null` — Callable task, array of other tasks names or nothing to get a defined tasks
+- **body** `callable():void|array|null` — Callable task, array of other tasks names or nothing to get a defined tasks
 
 ## before()
 
@@ -124,7 +124,7 @@ Call that task before specified task runs.
 
 Arguments:
 - **task** `string` — The task before $that should be run.
-- **do** `string|callable` — The task to be run.
+- **do** `string|callable():void` — The task to be run.
 
 ## after()
 
@@ -139,7 +139,7 @@ Call that task after specified task runs.
 
 Arguments:
 - **task** `string` — The task after $that should be run.
-- **do** `string|callable` — The task to be run.
+- **do** `string|callable():void` — The task to be run.
 
 ## fail()
 
@@ -155,7 +155,7 @@ When called multiple times for a task, previous fail() definitions will be overr
 
 Arguments:
 - **task** `string` — The task which need to fail so $that should be run.
-- **do** `string|callable` — The task to be run.
+- **do** `string|callable():void` — The task to be run.
 
 ## option()
 
@@ -381,7 +381,7 @@ Writes an warning message.
 ## writeln()
 
 ```php
-writeln($message, int $options = 0): void
+writeln(string $message, int $options = 0): void
 ```
 
 Writes a message to the output and adds a newline at the end.
@@ -403,7 +403,6 @@ set(string $name, $value): void
 ```
 
 Setup configuration option.
-
 
 
 ## add()

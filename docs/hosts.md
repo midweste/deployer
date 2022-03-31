@@ -31,8 +31,8 @@ host('example.org')
     ->set('hostname', 'example.cloud.google.com');
 ```
 
-The hostname will be used for the ssh connection, but the host will be referred to
-by it's alias when running Deployer.
+The hostname will be used for the ssh connection, but the host will be referred
+by its alias when running Deployer.
 
 ```
 $ dep test
@@ -43,7 +43,7 @@ Another important ssh connection parameter is `remote_user`.
 
 ```php
 host('example.org')
-    ->set('hostname', 'example.cloud.google.com');
+    ->set('hostname', 'example.cloud.google.com')
     ->set('remote_user', 'deployer');
 ```
 
@@ -55,9 +55,34 @@ autocompletion).
 
 ```php
 host('example.org')
-    ->setHostname('example.cloud.google.com');
+    ->setHostname('example.cloud.google.com')
     ->setRemoteUser('deployer');
 ```
+
+## Host config
+
+### `alias`
+
+The identifier used to identify a host. 
+You can use actual hostname or something like `prod` or `staging`.
+
+### `hostname` 
+
+Deployer uses this config for actual ssh connection.
+
+### `remote_user` 
+
+Deployer uses this config for actual ssh connection. If not specified, 
+Deployer will be using `RemoteUser` from **~/.ssh/config** file, or current
+OS username.
+
+### `port` 
+
+Port of remote ssh server to connect to. Default is `22`.
+
+### `config_file` 
+
+Default is `~/.ssh/config`.
 
 :::info Config file
 It is a good practice to keep connection parameters out of `deploy.php` file, as
@@ -70,21 +95,39 @@ Host *
 ```
 :::
 
-## Host config
+### `identity_file` 
 
-| Method               | Value                                              |
-|----------------------|----------------------------------------------------|
-| `setHostname`        | The `hostname`                                     |
-| `setRemoteUser`      | The `remote_user`                                  |
-| `setPort`            | The `port`                                         |
-| `setConfigFile`      | For example, `~/.ssh/config`.                      |
-| `setIdentityFile`    | For example, `~/.ssh/id_rsa`.                      |
-| `setForwardAgent`    | Default: `true`.                                   |
-| `setSshMultiplexing` | Default: `true`.                                   |
-| `setShell`           | Default: `bash -ls`.                               |
-| `setDeployPath`      | For example, `~/myapp`.                            |
-| `setLabels`          | Key-value pairs for host selector.                 |
-| `setSshArguments`    | For example, `['-o UserKnownHostsFile=/dev/null']` |
+For example, `~/.ssh/id_rsa`.
+
+### `forward_agent` 
+
+Default is `true`.
+
+### `ssh_multiplexing` 
+
+Default is `true`.
+
+### `shell` 
+
+Default is `bash -ls`.
+
+### `deploy_path` 
+
+For example, `~/myapp`.
+
+### `labels` 
+
+Key-value pairs for host selector.
+
+### `ssh_arguments` 
+
+For example, `['-o UserKnownHostsFile=/dev/null']`
+
+### `ssh_control_path`
+
+Default is `~/.ssh/%C`.
+
+If **CI** env is present, default value is `/dev/shm/%C`. 
 
 ## Multiple hosts
 

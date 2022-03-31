@@ -8,25 +8,19 @@ module.exports = [
     items: [
       'hosts',
       'tasks',
-      'config',
     ],
   },
   'ci-cd',
   'yaml',
   'cli',
-  {
-    type: 'category',
-    label: 'Advanced Guides',
-    items: [
-      'avoid-php-fpm-reloading',
-    ],
-  },
   'api',
   {
     type: 'category',
     label: 'Other',
     items: [
+      'avoid-php-fpm-reloading',
       'UPGRADE',
+      'KNOWN_BUGS',
     ],
   },
 ]

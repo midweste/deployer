@@ -1,4 +1,5 @@
 <?php declare(strict_types=1);
+
 /* (c) Anton Medvedev <anton@medv.io>
  *
  * For the full copyright and license information, please view the LICENSE
@@ -86,7 +87,7 @@ function env_stringify(array $array): string
 {
     return implode(' ', array_map(
         function ($key, $value) {
-            return sprintf("%s=%s", $key, escapeshellarg($value));
+            return sprintf("%s=%s", $key, escapeshellarg((string)$value));
         },
         array_keys($array),
         $array

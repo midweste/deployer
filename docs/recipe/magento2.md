@@ -22,15 +22,39 @@ in you deployer script.
 ```
 
 
+### magento_themes
+[Source](https://github.com/deployphp/deployer/blob/master/recipe/magento2.php#L26)
+
+You can also set the themes to run against. By default it'll deploy
+all themes - `add('magento_themes', ['Magento/luma', 'Magento/backend']);`
+
+```php title="Default value"
+[
+
+]
+```
+
+
+### static_content_jobs
+[Source](https://github.com/deployphp/deployer/blob/master/recipe/magento2.php#L34)
+
+Also set the number of conccurent jobs to run. The default is 1
+Update using: `set('static_content_jobs', '1');`
+
+```php title="Default value"
+'1'
+```
+
+
 ### content_version
-[Source](https://github.com/deployphp/deployer/blob/master/recipe/magento2.php#L22)
+[Source](https://github.com/deployphp/deployer/blob/master/recipe/magento2.php#L36)
 
 
 
 
 
 ### shared_files
-[Source](https://github.com/deployphp/deployer/blob/master/recipe/magento2.php#L26)
+[Source](https://github.com/deployphp/deployer/blob/master/recipe/magento2.php#L40)
 
 Overrides [shared_files](/docs/recipe/deploy/shared.md#shared_files) from `recipe/deploy/shared.php`.
 
@@ -45,7 +69,7 @@ Overrides [shared_files](/docs/recipe/deploy/shared.md#shared_files) from `recip
 
 
 ### shared_dirs
-[Source](https://github.com/deployphp/deployer/blob/master/recipe/magento2.php#L30)
+[Source](https://github.com/deployphp/deployer/blob/master/recipe/magento2.php#L44)
 
 Overrides [shared_dirs](/docs/recipe/deploy/shared.md#shared_dirs) from `recipe/deploy/shared.php`.
 
@@ -70,7 +94,7 @@ Overrides [shared_dirs](/docs/recipe/deploy/shared.md#shared_dirs) from `recipe/
 
 
 ### writable_dirs
-[Source](https://github.com/deployphp/deployer/blob/master/recipe/magento2.php#L44)
+[Source](https://github.com/deployphp/deployer/blob/master/recipe/magento2.php#L58)
 
 Overrides [writable_dirs](/docs/recipe/deploy/writable.md#writable_dirs) from `recipe/deploy/writable.php`.
 
@@ -87,7 +111,7 @@ Overrides [writable_dirs](/docs/recipe/deploy/writable.md#writable_dirs) from `r
 
 
 ### clear_paths
-[Source](https://github.com/deployphp/deployer/blob/master/recipe/magento2.php#L50)
+[Source](https://github.com/deployphp/deployer/blob/master/recipe/magento2.php#L64)
 
 Overrides [clear_paths](/docs/recipe/deploy/clear_paths.md#clear_paths) from `recipe/deploy/clear_paths.php`.
 
@@ -106,24 +130,34 @@ Overrides [clear_paths](/docs/recipe/deploy/clear_paths.md#clear_paths) from `re
 
 
 ### magento_version
-[Source](https://github.com/deployphp/deployer/blob/master/recipe/magento2.php#L59)
+[Source](https://github.com/deployphp/deployer/blob/master/recipe/magento2.php#L73)
 
 
 
 
 
 ### maintenance_mode_status_active
-[Source](https://github.com/deployphp/deployer/blob/master/recipe/magento2.php#L66)
+[Source](https://github.com/deployphp/deployer/blob/master/recipe/magento2.php#L80)
 
 
 
+
+
+### enable_zerodowntime
+[Source](https://github.com/deployphp/deployer/blob/master/recipe/magento2.php#L87)
+
+Deploy without setting maintenance mode if possible
+
+```php title="Default value"
+true
+```
 
 
 
 ## Tasks
 
 ### magento:compile
-[Source](https://github.com/deployphp/deployer/blob/master/recipe/magento2.php#L74)
+[Source](https://github.com/deployphp/deployer/blob/master/recipe/magento2.php#L91)
 
 Compiles magento di.
 
@@ -131,7 +165,7 @@ Tasks
 
 
 ### magento:deploy:assets
-[Source](https://github.com/deployphp/deployer/blob/master/recipe/magento2.php#L81)
+[Source](https://github.com/deployphp/deployer/blob/master/recipe/magento2.php#L98)
 
 Deploys assets.
 
@@ -139,7 +173,7 @@ Deploys assets.
 
 
 ### magento:sync:content_version
-[Source](https://github.com/deployphp/deployer/blob/master/recipe/magento2.php#L86)
+[Source](https://github.com/deployphp/deployer/blob/master/recipe/magento2.php#L111)
 
 Syncs content version.
 
@@ -147,7 +181,7 @@ Syncs content version.
 
 
 ### magento:maintenance:enable
-[Source](https://github.com/deployphp/deployer/blob/master/recipe/magento2.php#L96)
+[Source](https://github.com/deployphp/deployer/blob/master/recipe/magento2.php#L121)
 
 Enables maintenance mode.
 
@@ -155,7 +189,7 @@ Enables maintenance mode.
 
 
 ### magento:maintenance:disable
-[Source](https://github.com/deployphp/deployer/blob/master/recipe/magento2.php#L101)
+[Source](https://github.com/deployphp/deployer/blob/master/recipe/magento2.php#L126)
 
 Disables maintenance mode.
 
@@ -163,7 +197,7 @@ Disables maintenance mode.
 
 
 ### magento:config:import
-[Source](https://github.com/deployphp/deployer/blob/master/recipe/magento2.php#L106)
+[Source](https://github.com/deployphp/deployer/blob/master/recipe/magento2.php#L131)
 
 Config Import.
 
@@ -171,7 +205,7 @@ Config Import.
 
 
 ### magento:upgrade:db
-[Source](https://github.com/deployphp/deployer/blob/master/recipe/magento2.php#L141)
+[Source](https://github.com/deployphp/deployer/blob/master/recipe/magento2.php#L166)
 
 Upgrades magento database.
 
@@ -179,7 +213,7 @@ Upgrades magento database.
 
 
 ### magento:cache:flush
-[Source](https://github.com/deployphp/deployer/blob/master/recipe/magento2.php#L168)
+[Source](https://github.com/deployphp/deployer/blob/master/recipe/magento2.php#L193)
 
 Flushes Magento Cache.
 
@@ -187,7 +221,7 @@ Flushes Magento Cache.
 
 
 ### deploy:magento
-[Source](https://github.com/deployphp/deployer/blob/master/recipe/magento2.php#L173)
+[Source](https://github.com/deployphp/deployer/blob/master/recipe/magento2.php#L198)
 
 Magento2 deployment operations.
 
@@ -202,7 +236,7 @@ This task is group task which contains next tasks:
 
 
 ### magento:build
-[Source](https://github.com/deployphp/deployer/blob/master/recipe/magento2.php#L181)
+[Source](https://github.com/deployphp/deployer/blob/master/recipe/magento2.php#L206)
 
 Magento2 build operations.
 
@@ -215,7 +249,7 @@ This task is group task which contains next tasks:
 
 
 ### deploy
-[Source](https://github.com/deployphp/deployer/blob/master/recipe/magento2.php#L187)
+[Source](https://github.com/deployphp/deployer/blob/master/recipe/magento2.php#L212)
 
 Deploys your project.
 

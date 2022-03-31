@@ -1,4 +1,5 @@
 <?php declare(strict_types=1);
+
 /* (c) Anton Medvedev <anton@medv.io>
  *
  * For the full copyright and license information, please view the LICENSE
@@ -11,11 +12,29 @@ use Deployer\Exception\HttpieException;
 
 class Httpie
 {
+    /**
+     * @var string
+     */
     private $method = 'GET';
+    /**
+     * @var string
+     */
     private $url = '';
+    /**
+     * @var array
+     */
     private $headers = [];
+    /**
+     * @var string
+     */
     private $body = '';
+    /**
+     * @var array
+     */
     private $curlopts = [];
+    /**
+     * @var bool
+     */
     private $nothrow = false;
 
     public function __construct()
@@ -40,6 +59,14 @@ class Httpie
     {
         $http = new self;
         $http->method = 'POST';
+        $http->url = $url;
+        return $http;
+    }
+    
+    public static function patch(string $url): Httpie
+    {
+        $http = new self;
+        $http->method = 'PATCH';
         $http->url = $url;
         return $http;
     }

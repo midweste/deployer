@@ -1,4 +1,5 @@
 <?php declare(strict_types=1);
+
 /* (c) Anton Medvedev <anton@medv.io>
  *
  * For the full copyright and license information, please view the LICENSE
@@ -8,7 +9,6 @@
 namespace Deployer;
 
 use Deployer\Collection\Collection;
-use Deployer\Command\AutocompleteCommand;
 use Deployer\Command\BlackjackCommand;
 use Deployer\Command\ConfigCommand;
 use Deployer\Command\InitCommand;
@@ -166,7 +166,6 @@ class Deployer extends Container
         };
         $this['server'] = function ($c) {
             return new Server(
-                $c['input'],
                 $c['output'],
                 $this,
             );
@@ -177,7 +176,6 @@ class Deployer extends Container
                 $c['output'],
                 $c['server'],
                 $c['messenger'],
-                $c['sshClient'],
             );
         };
         $this['importer'] = function () {
@@ -211,7 +209,6 @@ class Deployer extends Container
     public function init()
     {
         $this->addTaskCommands();
-        $this->getConsole()->add(new AutocompleteCommand($this));
         $this->getConsole()->add(new BlackjackCommand());
         $this->getConsole()->add(new ConfigCommand($this));
         $this->getConsole()->add(new WorkerCommand($this));

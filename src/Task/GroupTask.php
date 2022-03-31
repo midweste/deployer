@@ -1,4 +1,5 @@
 <?php declare(strict_types=1);
+
 /* (c) Anton Medvedev <anton@medv.io>
  *
  * For the full copyright and license information, please view the LICENSE
@@ -42,5 +43,10 @@ class GroupTask extends Task
     public function getGroup(): array
     {
         return $this->group;
+    }
+
+    public function setGroup(array $group): void
+    {
+        $this->group = $group;
     }
 }

@@ -1,4 +1,5 @@
 <?php declare(strict_types=1);
+
 /* (c) Anton Medvedev <anton@medv.io>
  *
  * For the full copyright and license information, please view the LICENSE
@@ -11,30 +12,71 @@ use Deployer\Selector\Selector;
 
 class Task
 {
+    /**
+     * @var string
+     */
     private $name;
+    /**
+     * @var callable|null
+     */
     private $callback;
+    /**
+     * @var string
+     */
     private $description;
+    /**
+     * @var string
+     */
     private $sourceLocation = '';
+    /**
+     * @var array
+     */
     private $before = [];
+    /**
+     * @var array
+     */
     private $after = [];
+    /**
+     * @var bool
+     */
     private $hidden = false;
+    /**
+     * @var bool
+     */
     private $once = false;
+    /**
+     * @var bool
+     */
     private $oncePerNode = false;
+    /**
+     * @var int|null
+     */
     private $limit = null;
+    /**
+     * @var array|null
+     */
     private $selector = null;
+    /**
+     * @var bool
+     */
     private $verbose = false;
+    /**
+     * @var bool
+     */
     private $enabled = true;
 
     /**
-     * Task constructor.
-     * @param mixed $name
+     * @param callable():void $callback
      */
-    public function __construct($name, callable $callback = null)
+    public function __construct(string $name, callable $callback = null)
     {
         $this->name = $name;
         $this->callback = $callback;
     }
 
+    /**
+     * @param callable():void $callback
+     */
     public function setCallback(callable $callback): void
     {
         $this->callback = $callback;
@@ -55,10 +97,7 @@ class Task
         }
     }
 
-    /**
-     * @return mixed
-     */
-    public function getName()
+    public function getName(): string
     {
         return $this->name;
     }

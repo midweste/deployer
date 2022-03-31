@@ -1,5 +1,6 @@
-<?php declare(strict_types=1);
+<?php
 
+declare(strict_types=1);
 /* (c) Anton Medvedev <anton@medv.io>
  *
  * For the full copyright and license information, please view the LICENSE
@@ -177,7 +178,7 @@ function desc(?string $title = null): ?string
  * Alternatively get a defined task.
  *
  * @param string $name Name of current task.
- * @param callable():void|array|null $body Callable task, array of other tasks names or nothing to get a defined tasks
+ * @param callable|array|null $body Callable task, array of other tasks names or nothing to get a defined tasks
  */
 function task(string $name, $body = null): Task
 {
@@ -195,25 +196,8 @@ function task(string $name, $body = null): Task
         throw new \InvalidArgumentException('Task body should be a function or an array.');
     }
 
-    if ($deployer->tasks->has($name)) {
-        // If task already exists, try to replace.
-        $existingTask = $deployer->tasks->get($name);
-        if (get_class($existingTask) !== get_class($task)) {
-            // There is no "up" or "down"casting in PHP.
-            throw new \Exception('Tried to replace a Task with a GroupTask or vice-versa. This is not supported. If you are sure you want to do that, remove the old task `Deployer::get()->tasks->remove(<taskname>)` and then re-add the task.');
-        }
-        if ($existingTask instanceof GroupTask) {
-            $existingTask->setGroup($body);
-        } elseif ($existingTask instanceof Task) {
-            $existingTask->setCallback($body);
-        }
-        $task = $existingTask;
-    } else {
-        // If task does not exist, add it to the Collection.
-        $deployer->tasks->set($name, $task);
-    }
-
     $task->saveSourceLocation();
+    $deployer->tasks->set($name, $task);
 
     if (!empty(desc())) {
         $task->desc(desc());
@@ -227,7 +211,7 @@ function task(string $name, $body = null): Task
  * Call that task before specified task runs.
  *
  * @param string $task The task before $that should be run.
- * @param string|callable():void $do The task to be run.
+ * @param string|callable $do The task to be run.
  *
  * @return Task|null
  */
@@ -247,7 +231,7 @@ function before(string $task, $do)
  * Call that task after specified task runs.
  *
  * @param string $task The task after $that should be run.
- * @param string|callable():void $do The task to be run.
+ * @param string|callable $do The task to be run.
  *
  * @return Task|null
  */
@@ -268,7 +252,7 @@ function after(string $task, $do)
  * When called multiple times for a task, previous fail() definitions will be overridden.
  *
  * @param string $task The task which need to fail so $that should be run.
- * @param string|callable():void $do The task to be run.
+ * @param string|callable $do The task to be run.
  *
  * @return Task|null
  */
@@ -366,6 +350,7 @@ function run(string $command, ?array $options = [], ?int $timeout = null, ?int $
             return $command;
         }
     }
+
     $namedArguments = [];
     foreach (['timeout', 'idle_timeout', 'secret', 'env', 'real_time_output', 'no_throw'] as $arg) {
         if ($$arg !== null) {
@@ -477,7 +462,7 @@ function runLocally(string $command, ?array $options = [], ?int $timeout = null,
         $command = "export $env; $command";
     }
 
-    $output = $process->run(new Localhost(), $command, $options);
+    $output = $process->run(currentHost(), $command, $options);
 
     return rtrim($output);
 }
@@ -605,7 +590,7 @@ function upload($source, string $destination, array $config = []): void
     if ($host instanceof Localhost) {
         $rsync->call($host, $source, $destination, $config);
     } else {
-        $rsync->call($host, $source, "{$host->connectionString()}:$destination", $config);
+        $rsync->call($host, $source, "{$host->getConnectionString()}:$destination", $config);
     }
 }
 
@@ -626,7 +611,7 @@ function download(string $source, string $destination, array $config = []): void
     if ($host instanceof Localhost) {
         $rsync->call($host, $source, $destination, $config);
     } else {
-        $rsync->call($host, "{$host->connectionString()}:$source", $destination, $config);
+        $rsync->call($host, "{$host->getConnectionString()}:$source", $destination, $config);
     }
 }
 
@@ -654,8 +639,9 @@ function warning(string $message): void
 
 /**
  * Writes a message to the output and adds a newline at the end.
+ * @param string|array $message
  */
-function writeln(string $message, int $options = 0): void
+function writeln($message, int $options = 0): void
 {
     $host = currentHost();
     output()->writeln("[$host] " . parse($message), $options);
@@ -671,8 +657,8 @@ function parse(string $value): string
 
 /**
  * Setup configuration option.
+ *
  * @param mixed $value
- * @throws Exception
  */
 function set(string $name, $value): void
 {
@@ -910,7 +896,6 @@ function which(string $name): string
 
     // Deal with issue when `type -p` outputs something like `type -ap` in some implementations
     return trim(str_replace("$name is", "", $path));
-
 }
 
 /**

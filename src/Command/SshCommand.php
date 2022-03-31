@@ -1,4 +1,5 @@
 <?php declare(strict_types=1);
+
 /* (c) Anton Medvedev <anton@medv.io>
  *
  * For the full copyright and license information, please view the LICENSE
@@ -12,6 +13,8 @@ use Deployer\Deployer;
 use Deployer\Host\Localhost;
 use Deployer\Task\Context;
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Completion\CompletionInput;
+use Symfony\Component\Console\Completion\CompletionSuggestions;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -24,6 +27,9 @@ class SshCommand extends Command
 {
     use CommandCommon;
 
+    /**
+     * @var Deployer
+     */
     private $deployer;
 
     public function __construct(Deployer $deployer)
@@ -83,10 +89,23 @@ class SshCommand extends Command
         }
 
         Context::push(new Context($host));
-        $options = Client::connectionOptionsString($host);
+        $host->setSshMultiplexing(false);
+        $options = $host->connectionOptionsString();
         $deployPath = $host->get('deploy_path', '~');
 
-        passthru("ssh -t $options {$host->getConnectionString()} 'cd $deployPath/current 2>/dev/null || cd $deployPath; $shell_path'");
+        if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+            passthru("ssh -t $options {$host->connectionString()} \"cd $deployPath/current 2>/dev/null || cd $deployPath; $shell_path\"");
+        } else {
+            passthru("ssh -t $options {$host->connectionString()} 'cd $deployPath/current 2>/dev/null || cd $deployPath; $shell_path'");
+        }
         return 0;
+    }
+
+    public function complete(CompletionInput $input, CompletionSuggestions $suggestions): void
+    {
+        parent::complete($input, $suggestions);
+        if ($input->mustSuggestArgumentValuesFor('hostname')) {
+            $suggestions->suggestValues(array_keys($this->deployer->hosts->all()));
+        }
     }
 }

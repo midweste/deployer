@@ -19,6 +19,20 @@ add('recipes', ['magento2']);
 // in you deployer script.
 set('static_content_locales', 'en_US');
 
+// Configuration
+
+// You can also set the themes to run against. By default it'll deploy
+// all themes - `add('magento_themes', ['Magento/luma', 'Magento/backend']);`
+set('magento_themes', [
+
+]);
+
+// Configuration
+
+// Also set the number of conccurent jobs to run. The default is 1
+// Update using: `set('static_content_jobs', '1');`
+set('static_content_jobs', '1');
+
 set('content_version', function () {
     return time();
 });
@@ -69,6 +83,9 @@ set('maintenance_mode_status_active', function () {
     return strpos($maintenanceModeStatusOutput, MAINTENANCE_MODE_ACTIVE_OUTPUT_MSG) !== false;
 });
 
+// Deploy without setting maintenance mode if possible
+set('enable_zerodowntime', true);
+
 // Tasks
 desc('Compiles magento di');
 task('magento:compile', function () {
@@ -79,7 +96,15 @@ task('magento:compile', function () {
 
 desc('Deploys assets');
 task('magento:deploy:assets', function () {
-    run("{{bin/php}} {{release_or_current_path}}/bin/magento setup:static-content:deploy --content-version={{content_version}} {{static_content_locales}}");
+
+    $themesToCompile = '';
+    if (count(get('magento_themes')) > 0) {
+        foreach (get('magento_themes') as $theme) {
+            $themesToCompile .= ' -t ' . $theme;
+        }
+    }
+
+    run("{{bin/php}} {{release_or_current_path}}/bin/magento setup:static-content:deploy --content-version={{content_version}} {{static_content_locales}} $themesToCompile -j {{static_content_jobs}}");
 });
 
 desc('Syncs content version');
@@ -125,13 +150,13 @@ task('magento:config:import', function () {
     }
 
     if ($configImportNeeded) {
-        if (!get('maintenance_mode_status_active')) {
+        if (get('enable_zerodowntime') && !get('maintenance_mode_status_active')) {
             invoke('magento:maintenance:enable');
         }
 
         run('{{bin/php}} {{release_or_current_path}}/bin/magento app:config:import --no-interaction');
 
-        if (!get('maintenance_mode_status_active')) {
+        if (get('enable_zerodowntime') && !get('maintenance_mode_status_active')) {
             invoke('magento:maintenance:disable');
         }
     }
@@ -152,13 +177,13 @@ task('magento:upgrade:db', function () {
     }
 
     if ($databaseUpgradeNeeded) {
-        if (!get('maintenance_mode_status_active')) {
+        if (get('enable_zerodowntime') && !get('maintenance_mode_status_active')) {
             invoke('magento:maintenance:enable');
         }
 
         run("{{bin/php}} {{release_or_current_path}}/bin/magento setup:upgrade --keep-generated --no-interaction");
 
-        if (!get('maintenance_mode_status_active')) {
+        if (get('enable_zerodowntime') && !get('maintenance_mode_status_active')) {
             invoke('magento:maintenance:disable');
         }
     }

@@ -1,4 +1,5 @@
 <?php declare(strict_types=1);
+
 /* (c) Anton Medvedev <anton@medv.io>
  *
  * For the full copyright and license information, please view the LICENSE
@@ -50,11 +51,6 @@ class Master
     private $messenger;
 
     /**
-     * @var Client
-     */
-    private $client;
-
-    /**
      * @var false|string
      */
     private $phpBin;
@@ -63,15 +59,13 @@ class Master
         InputInterface  $input,
         OutputInterface $output,
         Server          $server,
-        Messenger       $messenger,
-        Client          $client
+        Messenger       $messenger
     )
     {
         $this->input = $input;
         $this->output = $output;
         $this->server = $server;
         $this->messenger = $messenger;
-        $this->client = $client;
         $this->phpBin = (new PhpExecutableFinder())->find();
     }
 
@@ -163,28 +157,6 @@ class Master
         }
 
         return 0;
-    }
-
-    /**
-     * @param Host[] $hosts
-     */
-    public function connect(array $hosts): void
-    {
-        // Connect to each host sequentially, to allow user type yes if fingerprint is missing.
-        foreach ($hosts as $host) {
-            if ($host instanceof Localhost) {
-                continue;
-            }
-            if ($this->output->isDecorated() && !getenv('CI')) {
-                $this->output->write("  connecting $host\r");
-            } else {
-                $this->output->writeln("connecting $host");
-            }
-            $this->client->connect($host);
-            if ($this->output->isDecorated() && !getenv('CI')) {
-                $this->output->write(str_repeat(' ', intval(getenv('COLUMNS')) - 1) . "\r");
-            }
-        }
     }
 
     /**

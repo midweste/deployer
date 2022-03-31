@@ -1,4 +1,5 @@
 <?php declare(strict_types=1);
+
 /* (c) Anton Medvedev <anton@medv.io>
  *
  * For the full copyright and license information, please view the LICENSE
@@ -17,7 +18,13 @@ use Symfony\Component\Process\Process;
 
 class ProcessRunner
 {
+    /**
+     * @var Printer
+     */
     private $pop;
+    /**
+     * @var Logger
+     */
     private $logger;
 
     public function __construct(Printer $pop, Logger $logger)
@@ -36,13 +43,13 @@ class ProcessRunner
         $defaults = [
             'timeout' => $host->get('default_timeout', 300),
             'idle_timeout' => null,
-            'cwd' => defined('DEPLOYER_ROOT') ? DEPLOYER_ROOT : null,
+            'cwd' => getenv('DEPLOYER_ROOT') !== false ? getenv('DEPLOYER_ROOT') : (defined('DEPLOYER_DEPLOY_FILE') ? dirname(DEPLOYER_DEPLOY_FILE) : null),
             'real_time_output' => false,
             'shell' => 'bash -s',
         ];
         $config = array_merge($defaults, $config);
 
-        $this->pop->command($host, 'run locally', $command);
+        $this->pop->command($host, 'run', $command);
 
         $terminalOutput = $this->pop->callback($host, $config['real_time_output']);
         $callback = function ($type, $buffer) use ($host, $terminalOutput) {
@@ -73,7 +80,7 @@ class ProcessRunner
                 $process->getOutput(),
                 $process->getErrorOutput()
             );
-        } catch (ProcessTimedOutException $exception) {
+        } catch (ProcessTimedOutException $exception) { // @phpstan-ignore-line can be thrown but is absent from the phpdoc
             throw new TimeoutException(
                 $command,
                 $exception->getExceededTimeout()

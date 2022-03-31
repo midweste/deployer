@@ -1,4 +1,5 @@
 <?php declare(strict_types=1);
+
 /* (c) Anton Medvedev <anton@medv.io>
  *
  * For the full copyright and license information, please view the LICENSE
@@ -13,6 +14,8 @@ use Deployer\Exception\Exception;
 use Deployer\Exception\GracefulShutdownException;
 use Deployer\Executor\Planner;
 use Deployer\Utility\Httpie;
+use Symfony\Component\Console\Completion\CompletionInput;
+use Symfony\Component\Console\Completion\CompletionSuggestions;
 use Symfony\Component\Console\Input\InputInterface as Input;
 use Symfony\Component\Console\Input\InputOption as Option;
 use Symfony\Component\Console\Output\OutputInterface as Output;
@@ -125,8 +128,8 @@ class MainCommand extends SelectCommand
         if (!$plan) {
             $this->checkUpdates();
             $this->validateConfig();
-            $this->deployer->master->connect($hosts);
             $this->deployer->server->start();
+
             if (!empty($skippedTasks)) {
                 foreach ($skippedTasks as $taskName) {
                     $output->writeln("<fg=yellow;options=bold>skip</> $taskName");
@@ -214,6 +217,18 @@ class MainCommand extends SelectCommand
         $validate($this->deployer->config, $this->deployer->config);
         foreach ($this->deployer->hosts as $host) {
             $validate($host->config(), $this->deployer->config);
+        }
+    }
+
+    public function complete(CompletionInput $input, CompletionSuggestions $suggestions): void
+    {
+        parent::complete($input, $suggestions);
+        if ($input->mustSuggestOptionValuesFor('start-from')) {
+            $taskNames = [];
+            foreach ($this->deployer->scriptManager->getTasks($this->getName()) as $task) {
+                $taskNames[] = $task->getName();
+            }
+            $suggestions->suggestValues($taskNames);
         }
     }
 }

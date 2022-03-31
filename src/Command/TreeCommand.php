@@ -1,4 +1,5 @@
 <?php declare(strict_types=1);
+
 /* (c) Anton Medvedev <anton@medv.io>
  *
  * For the full copyright and license information, please view the LICENSE
@@ -10,16 +11,33 @@ namespace Deployer\Command;
 use Deployer\Deployer;
 use Deployer\Task\GroupTask;
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Completion\CompletionInput;
+use Symfony\Component\Console\Completion\CompletionSuggestions;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface as Input;
 use Symfony\Component\Console\Output\OutputInterface as Output;
 
 class TreeCommand extends Command
 {
+    /**
+     * @var Output
+     */
     protected $output;
+    /**
+     * @var Deployer
+     */
     private $deployer;
+    /**
+     * @var array
+     */
     private $tree;
+    /**
+     * @var int
+     */
     private $depth = 0;
+    /**
+     * @var array
+     */
     private $openGroupDepths = [];
 
     public function __construct(Deployer $deployer)
@@ -147,6 +165,14 @@ class TreeCommand extends Command
             $prefix .= $startSymbol . '──';
 
             $this->output->writeln(sprintf('%s %s', $prefix, $treeItem['taskName']));
+        }
+    }
+
+    public function complete(CompletionInput $input, CompletionSuggestions $suggestions): void
+    {
+        parent::complete($input, $suggestions);
+        if ($input->mustSuggestArgumentValuesFor('task')) {
+            $suggestions->suggestValues(array_keys($this->deployer->tasks->all()));
         }
     }
 }

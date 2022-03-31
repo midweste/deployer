@@ -1,4 +1,5 @@
 <?php declare(strict_types=1);
+
 /* (c) Anton Medvedev <anton@medv.io>
  *
  * For the full copyright and license information, please view the LICENSE
@@ -10,8 +11,10 @@ namespace Deployer\Host;
 use Deployer\Configuration\Configuration;
 use Deployer\Deployer;
 use Deployer\Exception\ConfigurationException;
+use Deployer\Exception\Exception;
 use Deployer\Task\Context;
 use function Deployer\Support\colorize_host;
+use function Deployer\Support\parse_home_dir;
 
 class Host
 {
@@ -83,7 +86,7 @@ class Host
 
     public function getAlias(): ?string
     {
-        return $this->config->get('alias');
+        return $this->config->get('alias', null);
     }
 
     public function setTag(string $tag): self
@@ -105,7 +108,7 @@ class Host
 
     public function getHostname(): ?string
     {
-        return $this->config->get('hostname');
+        return $this->config->get('hostname', null);
     }
 
     public function setRemoteUser(string $user): self
@@ -116,18 +119,25 @@ class Host
 
     public function getRemoteUser(): ?string
     {
-        return $this->config->get('remote_user');
+        return $this->config->get('remote_user', null);
     }
 
-    public function setPort(int $port): self
+    /**
+     * @param string|int|null $port
+     * @return $this
+     */
+    public function setPort($port): self
     {
         $this->config->set('port', $port);
         return $this;
     }
 
-    public function getPort(): ?int
+    /**
+     * @return string|int|null
+     */
+    public function getPort()
     {
-        return $this->config->get('port');
+        return $this->config->get('port', null);
     }
 
     public function setConfigFile(string $file): self
@@ -138,7 +148,7 @@ class Host
 
     public function getConfigFile(): ?string
     {
-        return $this->config->get('config_file');
+        return $this->config->get('config_file', null);
     }
 
     public function setIdentityFile(string $file): self
@@ -149,7 +159,7 @@ class Host
 
     public function getIdentityFile(): ?string
     {
-        return $this->config->get('identity_file');
+        return $this->config->get('identity_file', null);
     }
 
     public function setForwardAgent(bool $on): self
@@ -160,7 +170,7 @@ class Host
 
     public function getForwardAgent(): ?bool
     {
-        return $this->config->get('forward_agent');
+        return $this->config->get('forward_agent', null);
     }
 
     public function setSshMultiplexing(bool $on): self
@@ -171,7 +181,7 @@ class Host
 
     public function getSshMultiplexing(): ?bool
     {
-        return $this->config->get('ssh_multiplexing');
+        return $this->config->get('ssh_multiplexing', null);
     }
 
     public function setShell(string $command): self
@@ -182,7 +192,7 @@ class Host
 
     public function getShell(): ?string
     {
-        return $this->config->get('shell');
+        return $this->config->get('shell', null);
     }
 
     public function setDeployPath(string $path): self
@@ -193,7 +203,7 @@ class Host
 
     public function getDeployPath(): ?string
     {
-        return $this->config->get('deploy_path');
+        return $this->config->get('deploy_path', null);
     }
 
     public function setLabels(array $labels): self
@@ -204,15 +214,7 @@ class Host
 
     public function getLabels(): ?array
     {
-        return $this->config->get('labels');
-    }
-
-    public function getConnectionString(): string
-    {
-        if ($this->get('remote_user', '') !== '') {
-            return $this->get('remote_user') . '@' . $this->get('hostname');
-        }
-        return $this->get('hostname');
+        return $this->config->get('labels', null);
     }
 
     public function setSshArguments(array $args): self
@@ -223,6 +225,81 @@ class Host
 
     public function getSshArguments(): ?array
     {
-        return $this->config->get('ssh_arguments');
+        return $this->config->get('ssh_arguments', null);
+    }
+
+    public function setSshControlPath(string $path): self
+    {
+        $this->config->set('ssh_control_path', $path);
+        return $this;
+    }
+
+    public function getSshControlPath(): string
+    {
+        return $this->config->get('ssh_control_path', $this->generateControlPath());
+    }
+
+    private function generateControlPath(): string
+    {
+        $C = $this->getHostname();
+        if ($this->has('remote_user')) {
+            $C = $this->getRemoteUser() . '@' . $C;
+        }
+        if ($this->has('port')) {
+            $C .= ':' . $this->getPort();
+        }
+
+        // In case of CI environment, lets use shared memory.
+        if (getenv('CI') && is_writable('/dev/shm')) {
+            return "/dev/shm/$C";
+        }
+
+        return "~/.ssh/$C";
+    }
+
+    public function connectionString(): string
+    {
+        if ($this->get('remote_user', '') !== '') {
+            return $this->get('remote_user') . '@' . $this->get('hostname');
+        }
+        return $this->get('hostname');
+    }
+
+    public function connectionOptionsString(): string
+    {
+        return implode(' ', array_map('escapeshellarg', $this->connectionOptionsArray()));
+    }
+
+    /**
+     * @return string[]
+     */
+    public function connectionOptionsArray(): array
+    {
+        $options = [];
+        if ($this->has('ssh_arguments')) {
+            foreach ($this->getSshArguments() as $arg) {
+                $options = array_merge($options, explode(' ', $arg));
+            }
+        }
+        if ($this->has('port')) {
+            $options = array_merge($options, ['-p', $this->getPort()]);
+        }
+        if ($this->has('config_file')) {
+            $options = array_merge($options, ['-F', parse_home_dir($this->getConfigFile())]);
+        }
+        if ($this->has('identity_file')) {
+            $options = array_merge($options, ['-i', parse_home_dir($this->getIdentityFile())]);
+        }
+        if ($this->has('forward_agent') && $this->getForwardAgent()) {
+            $options = array_merge($options, ['-A']);
+        }
+        if ($this->has('ssh_multiplexing') && $this->getSshMultiplexing()) {
+            $options = array_merge($options, [
+                '-o', 'ControlMaster=auto',
+                '-o', 'ControlPersist=60',
+                '-o', 'ControlPath=' . $this->getSshControlPath(),
+            ]);
+        }
+        return $options;
     }
 }

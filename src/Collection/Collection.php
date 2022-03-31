@@ -1,4 +1,5 @@
 <?php declare(strict_types=1);
+
 /* (c) Anton Medvedev <anton@medv.io>
  *
  * For the full copyright and license information, please view the LICENSE
@@ -12,6 +13,9 @@ use IteratorAggregate;
 
 class Collection implements Countable, IteratorAggregate
 {
+    /**
+     * @var array
+     */
     protected $values = [];
 
     public function all(): array
@@ -42,6 +46,15 @@ class Collection implements Countable, IteratorAggregate
     public function set(string $name, $object)
     {
         $this->values[$name] = $object;
+    }
+
+    public function remove(string $name): void
+    {
+        if ($this->has($name)) {
+            unset($this->values[$name]);
+        } else {
+            $this->throwNotFound($name);
+        }
     }
 
     public function count(): int
