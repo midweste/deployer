@@ -40,9 +40,9 @@ task('deploy:clear_server_paths', function () {
     }
 
     $sudo = $host->get('clear_server_use_sudo', false) ? 'sudo' : '';
-    $batch = 100;
+    // $batch = 100;
 
-    $commands = [];
+    // $commands = [];
     foreach ($paths as $path) {
         if (strpos($path, '/') !== 0) {
             warning(parse("Path \"$path\" is not absolute. Skipping"));
@@ -52,11 +52,21 @@ task('deploy:clear_server_paths', function () {
             warning(parse("Path \"$path\" not found. Skipping"));
             continue;
         }
-        $commands[] = "$sudo rm -rf $path";
-    }
-    $chunks = array_chunk($commands, $batch);
-    foreach ($chunks as $chunk) {
-        $clearCommand = implode('; ', $chunk);
+
+        // Added non-standard option -mindepth 1 in order to prevent the search root directory to be removed
+        // $clearCommand = "$sudo find \"$path\" -mindepth 1";
+        // run($clearCommand, ['real_time_output' => true]);
+
+        $clearCommand = "$sudo find \"$path\" -mindepth 1 -delete";
         run($clearCommand);
+
+        // Not sure why, but the trust rm -rf was returning directory not empty and failing
+        //$rmdirCommand = "$sudo rm -rf \"$path\"";
+        //run($rmdirCommand);
     }
+    // $chunks = array_chunk($commands, $batch);
+    // foreach ($chunks as $chunk) {
+    //     $clearCommand = implode('; ', $chunk);
+    //     run($clearCommand);
+    // }
 })->desc('Remove server files and/or directories based on absolute paths');
