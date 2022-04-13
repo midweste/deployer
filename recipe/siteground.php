@@ -6,7 +6,7 @@ require_once __DIR__ . '/common.php';
 
 require_once __DIR__ . '/../contrib/clearserverpaths.php';
 require_once __DIR__ . '/../contrib/hardening.php';
-require_once __DIR__ . '/../contrib/pause.php';
+// require_once __DIR__ . '/../contrib/pause.php';
 require_once __DIR__ . '/../contrib/wordpresscli.php';
 
 add('recipes', ['siteground']);
@@ -24,7 +24,7 @@ set('harden_file_permissions', 'u=r,g=r,o=r');
 /* ----------------- clear_server_paths ----------------- */
 set('clear_server_paths', []);
 /* ----------------- pause ----------------- */
-set('pause_seconds', 5);
+// set('pause_seconds', 5);
 
 /**
  * Siteground bin overrides
@@ -73,7 +73,6 @@ task('deploy', [
     'deploy:harden',
     'deploy:publish',
     'wp:cache:flush',
-    'deploy:pause',
     'deploy:clear_server_paths',
 ])->desc('Deploys your project');
 
