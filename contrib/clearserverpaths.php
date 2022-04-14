@@ -58,7 +58,8 @@ task('deploy:clear_server_paths', function () {
         // $clearCommand = "$sudo find \"$path\" -mindepth 1";
         // run($clearCommand, ['real_time_output' => true]);
 
-        $clearCommand = "{$sudo}find $path -mindepth 1 -delete";
+        // $clearCommand = "{$sudo}find $path -mindepth 1 -delete";
+        $clearCommand = "{$sudo}find $path -delete";
         // warning($clearCommand);
         run($clearCommand);
 
