@@ -5,7 +5,7 @@
 Add to your _deploy.php_
 
 ```php
-require 'contrib/clearpaths.php';
+require 'contrib/clearserverpaths.php';
 ```
 
 ## Configuration
@@ -15,10 +15,10 @@ require 'contrib/clearpaths.php';
 ## Usage
 
 Clear paths on host outside of release directory (rm -rf).  Must be specified as absolute directories.
-## WARNING: THIS CAN BE A DESTRUCTIVE COMMAND, ALWAYS MAKE SURE TO USE ABSOLUTE FILE/FOLDER PATHS
+## WARNING: THIS CAN BE A DESTRUCTIVE COMMAND, ALWAYS MAKE SURE TO USE ABSOLUTE FILE/FOLDER PATHS AND MAKE SURE FOLDERS ARE CORRECTLY QUOTED IF NEEDED
 
 ```php
-before('deploy:publish', 'deploy:clear_server_paths');
+after('deploy:publish', 'deploy:clear_server_paths');
 ```
 
  */
@@ -39,17 +39,18 @@ task('deploy:clear_server_paths', function () {
         return;
     }
 
-    $sudo = $host->get('clear_server_use_sudo', false) ? 'sudo' : '';
+    $sudo = $host->get('clear_server_use_sudo', false) ? 'sudo ' : '';
     // $batch = 100;
 
     // $commands = [];
     foreach ($paths as $path) {
+        $path = parse($path);
         if (strpos($path, '/') !== 0) {
-            warning(parse("Path \"$path\" is not absolute. Skipping"));
+            warning("Path \"$path\" is not absolute. Skipping");
             continue;
         }
         if (!test("[ -d $path ]")) {
-            warning(parse("Path \"$path\" not found. Skipping"));
+            warning("Path \"$path\" not found. Skipping");
             continue;
         }
 
@@ -57,7 +58,8 @@ task('deploy:clear_server_paths', function () {
         // $clearCommand = "$sudo find \"$path\" -mindepth 1";
         // run($clearCommand, ['real_time_output' => true]);
 
-        $clearCommand = "$sudo find \"$path\" -mindepth 1 -delete";
+        $clearCommand = "{$sudo}find $path -mindepth 1 -delete";
+        // warning($clearCommand);
         run($clearCommand);
 
         // Not sure why, but the trust rm -rf was returning directory not empty and failing
@@ -69,4 +71,4 @@ task('deploy:clear_server_paths', function () {
     //     $clearCommand = implode('; ', $chunk);
     //     run($clearCommand);
     // }
-})->desc('Remove server files and/or directories based on absolute paths');
+})->desc('WARNING: DESTRUCTIVE!! Removes server files and/or directories outside the deployment root based on absolute paths');
