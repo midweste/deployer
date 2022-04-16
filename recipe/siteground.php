@@ -73,7 +73,7 @@ task('deploy', [
     'deploy:harden',
     'deploy:publish',
     'wp:cache:flush',
-    'deploy:clear_server_paths',
+
 ])->desc('Deploys your project');
 
 /**
@@ -84,3 +84,4 @@ after('deploy:failed', function () {
     invoke('deploy:unlock');
     invoke('deploy:unharden');
 });
+after('deploy:symlink', 'deploy:clear_server_paths');
