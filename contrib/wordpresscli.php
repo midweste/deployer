@@ -63,6 +63,32 @@ class WordpressCli
         return $option;
     }
 
+    public function cacheWarm()
+    {
+        $host = $this->host;
+
+        $url = $host->get('wpcli_domain', '');
+        if (empty($url)) {
+            throw error('No domain name set for current host. "wpcli_domain" empty.');
+        }
+
+        $scheme = $host->get('wpcli_scheme', '');
+        if (empty($scheme) || ($scheme !== 'http' && $scheme !== 'https')) {
+            throw error('Invalid scheme set for current host. "wpcli_scheme" empty or not http/https.');
+        }
+
+        $tmp = sys_get_temp_dir();
+        if (!is_dir($tmp)) {
+            throw error('No temporary directory could be found.');
+        }
+
+        $wget = whichLocal('wget');
+        $command = "$wget --directory-prefix=\"$tmp\" --spider --recursive --no-directories --domains=$url --content-disposition --reject-regex \"(.*)\?(.*)\" --limit-rate=1024k $scheme://$url/";
+        //wget --directory-prefix=/tmp --spider --recursive --no-directories --domains=www.thecleanbedroom.com --content-disposition --reject-regex "(.*)\?(.*)" --limit-rate=1024k https://www.thecleanbedroom.com/
+        warning($command);
+        runLocally($command, ['real_time_output' => true, 'timeout' => 0, 'idle_timeout' => 0]);
+    }
+
     public function command(string $command): string
     {
         $host = $this->host;
@@ -84,9 +110,15 @@ task('wp', function () {
 task('wp:cache:flush', function () {
     $wpcli = new WordpressCli(currentHost());
     $command = $wpcli->command('cache flush');
-
     run($command);
 })->desc('Clear wordpress cache');
+
+task('wp:cache:warm', function () {
+    $wpcli = new WordpressCli(currentHost());
+    $wpcli->cacheWarm();
+})->desc('Warm external edge cache cache');
+
+
 
 // function wpcliSitePath(Host $host): string
 // {
