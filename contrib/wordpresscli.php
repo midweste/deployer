@@ -83,8 +83,8 @@ class WordpressCli
         }
 
         $wget = whichLocal('wget');
-        // --nocache ?
-        $command = "$wget -e robots=off -nv --ignore-length --no-check-certificate --directory-prefix=\"$tmp/wget\" --spider --recursive --no-directories --domains=$url --content-disposition --reject-regex \"(.*)\?(.*)\" --limit-rate=1024k $scheme://$url/";
+        // --nocache  --limit-rate=1024k
+        $command = "$wget -e robots=off -nv --ignore-length --no-check-certificate --directory-prefix=\"$tmp/wget\" --spider --recursive --no-directories --domains=$url --content-disposition --reject-regex \"(.*)\?(.*)\"  $scheme://$url/";
         //wget --directory-prefix=/tmp --spider --recursive --no-directories --domains=www.thecleanbedroom.com --content-disposition --reject-regex "(.*)\?(.*)" --limit-rate=1024k https://www.thecleanbedroom.com/
         warning($command);
         runLocally($command, ['real_time_output' => true, 'timeout' => 0, 'idle_timeout' => 0]);
