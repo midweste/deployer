@@ -26,7 +26,6 @@ after('deploy:publish', 'deploy:clear_server_paths');
 namespace Deployer;
 
 use Deployer\Host\Host;
-use Deployer\Host\Localhost;
 
 // List of paths to remove from host.
 set('clear_server_paths', []);
@@ -65,7 +64,7 @@ class ClearServerPaths
             // $clearCommand = "{$sudo}find $path -mindepth 1 -delete";
             $clearCommand = "{$sudo}find $path -delete";
             // warning($clearCommand);
-            run($clearCommand);
+            run($clearCommand, ['no_throw' => true]);
 
             // Not sure why, but the trust rm -rf was returning directory not empty and failing
             //$rmdirCommand = "$sudo rm -rf \"$path\"";
