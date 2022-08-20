@@ -27,8 +27,8 @@ require_once __DIR__ . '/mysql.php';
 require_once __DIR__ . '/filetransfer.php';
 
 task('pull-all', [
-    'files:pull',
     'db:pull-replace',
+    'files:pull',
 ])->desc('Pull db from a remote stage, replaces instances of domain in db, and pulls writable files');
 
 task('staging:files:pull', function () {
@@ -42,6 +42,6 @@ task('staging:db:pull-replace', function () {
 })->desc('Truncate staging db, pull db from a production, find/replace production with staging domain');
 
 task('staging:pull-all', [
+    'staging:db:pull-replace',
     'staging:files:pull',
-    'staging:db:pull-replace'
 ])->desc('Copy writable directories from production to staging and truncate staging db, pull db from a production, find/replace production with staging domain');
