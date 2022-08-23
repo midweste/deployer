@@ -2,7 +2,7 @@
 <!-- Instead edit recipe/provision/website.php -->
 <!-- Then run bin/docgen -->
 
-# website
+# Website Recipe
 
 [Source](/recipe/provision/website.php)
 
@@ -34,7 +34,7 @@ Provision website.
 
 
 ### logs:caddy
-[Source](https://github.com/deployphp/deployer/blob/master/recipe/provision/website.php#L81)
+[Source](https://github.com/deployphp/deployer/blob/master/recipe/provision/website.php#L82)
 
 Shows caddy logs.
 
@@ -42,7 +42,7 @@ Shows caddy logs.
 
 
 ### logs:caddy:syslog
-[Source](https://github.com/deployphp/deployer/blob/master/recipe/provision/website.php#L86)
+[Source](https://github.com/deployphp/deployer/blob/master/recipe/provision/website.php#L87)
 
 Shows caddy syslog.
 

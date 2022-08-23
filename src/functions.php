@@ -200,7 +200,7 @@ function task(string $name, $body = null): Task
         $existingTask = $deployer->tasks->get($name);
         if (get_class($existingTask) !== get_class($task)) {
             // There is no "up" or "down"casting in PHP.
-            throw new \Exception('Tried to replace a Task with a GroupTask or vice-versa. This is not supported. If you are sure you want to do that, remove the old task `Deployer::get()->tasks->remove(<taskname>)` and then re-add the task.');
+            throw new \Exception('Tried to replace Task \'' . $name . '\' with a GroupTask or vice-versa. This is not supported. If you are sure you want to do that, remove the old task `Deployer::get()->tasks->remove(<taskname>)` and then re-add the task.');
         }
         if ($existingTask instanceof GroupTask) {
             $existingTask->setGroup($body);
@@ -587,7 +587,7 @@ function invoke(string $taskName): void
  * - `options` with additional flags passed directly to the `rsync` command
  * - `timeout` for `Process::fromShellCommandline()` (`null` by default)
  * - `progress_bar` to display upload/download progress
- * - `display_stats' to display rsync set of statistics
+ * - `display_stats` to display rsync set of statistics
  *
  * @param string|string[] $source
  * @param array $config

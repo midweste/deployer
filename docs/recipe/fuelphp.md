@@ -2,12 +2,39 @@
 <!-- Instead edit recipe/fuelphp.php -->
 <!-- Then run bin/docgen -->
 
-# fuelphp
+# How to Deploy Fuelphp
 
 [Source](/recipe/fuelphp.php)
 
-* Requires
-  * [common](/docs/recipe/common.md)
+## How to deploy a Fuelphp project with zero downtime?
+
+- First, [install](/docs/installation.md) the Deployer. 
+- Second, require `recipe/fuelphp.php` recipe into your _deploy.php_ or _deploy.yaml_ file.
+- Third, and now you can have a zero downtime deployment!
+
+Did you know that you can deploy **Fuelphp** project with a single command? Just run `dep deploy`.
+Something went wrong? Just run `dep rollback` to rollback your changes.
+Also, you can take an advantage of the [Deployer's CLI](/docs/cli.md) to deploy your project.
+
+Another cool feature of the Deployer is [provisioning](/docs/recipe/provision.md). Take any server, and run `dep provision` command.
+This command will configure webserver, databases, php, ssl certificates, and more. 
+You will get everything you need to run your **Fuelphp** project.
+
+Deployer does next steps to [deploy](#deploy) **Fuelphp**:
+* Displays info about deployment
+* Prepares host for deploy
+* Locks deploy
+* Prepares release
+* Updates code
+* Creates symlinks for shared files and dirs
+* Makes writable dirs
+* Installs vendors
+* Creates symlink to release
+* Unlocks deploy
+* Cleanup old releases
+
+
+The fuelphp recipe is based on the [common](/docs/recipe/common.md) recipe.
 
 ## Configuration
 ### shared_dirs

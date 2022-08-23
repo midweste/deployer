@@ -5,7 +5,7 @@
 2. Change config `real_hostname` to `hostname`.
 3. Change config `user` to `remote_user`.
 4. Update `host()` definitions:
-    1. Add `set` prefix to all setters: `identityFile` -> `setIdentityFile` or `set('identify_file')`
+    1. Add `set` prefix to all setters: `identityFile` -> `setIdentityFile` or `set('identity_file')`
     2. Update `host(...)->addSshOption('UserKnownHostsFile', '/dev/null')` to `host(...)->setSshArguments(['-o UserKnownHostsFile=/dev/null']);`
     3. Replace _stage_ with labels, i.e.
        ```php
@@ -53,7 +53,7 @@
      deploy:vendors:
        - run: 'cd {{release_path}} && echo {{bin/composer}} {{composer_options}} 2>&1'
    ``` 
-8. Rename task `success` to `deploy:success`.
+8. Rename task `success` to `deploy:success` and `cleanup` to `deploy:cleanup`.
 9. Verbosity function (`isDebug()`, etc) deleted. Use `output()->isDebug()` instead.
 10. runLocally() commands are executed relative to the recipe file directory. This behaviour can be overridden via an environment variable:
     ```
@@ -61,6 +61,7 @@
     ```
 11. Replace `local()` tasks with combination of `once()` and `runLocally()` func.
 12. Replace `locateBinaryPath()` with `which()` func.
+13. Configuration property `default_stage` is not supported.
 
 ## Step 2: Deploy
 
