@@ -11,6 +11,7 @@ require 'contrib/wordpresscli.php';
 ## Configuration
 - `wpcli_webroot`, Path of the root website folder relative to the site root. Defaults to ''
 - `wpcli_domain`, Domain name of wordpress site for use with wp cli
+- `bin/wp`, Path to wordpress cli executable
 ## Usage
 
 Wordpress cli tasks.  Currently only wp
@@ -92,8 +93,9 @@ class WordpressCli
 
     public function command(string $command): string
     {
+        $wp = get('bin/wp', which('wp'));
         $host = $this->host;
-        $command = sprintf('wp %s %s %s', $command,  $this->sitePath($host), $this->url($host));
+        $command = sprintf('%s %s %s %s', $wp, $command,  $this->sitePath($host), $this->url($host));
         return $command;
     }
 }
