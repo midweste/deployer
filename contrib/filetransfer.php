@@ -27,7 +27,7 @@ namespace Deployer;
 use Deployer\Host\Host;
 use Deployer\Host\Localhost;
 
-set('filetransfer_rsync_switches', '-rlztv --progress --size-only --ipv4 --delete');
+set('filetransfer_rsync_switches', '-rlztv --progress --size-only --ipv4 --delete --ignore-missing-args');
 set('filetransfer_rsync_excludes', []);
 
 class FileTransfer
@@ -45,7 +45,7 @@ class FileTransfer
         }
 
         $rsync = whichContextual('rsync', $local);
-        $switches = get('filetransfer_rsync_switches', '-rlztv --progress --size-only --ipv4 --delete');  # --delete-after? --delete-before?
+        $switches = get('filetransfer_rsync_switches', '-rlztv --progress --size-only --ipv4 --delete --ignore-missing-args');  # --delete-after? --delete-before?
 
         $rsyncExcludes = get('filetransfer_rsync_excludes', []);
         $excludes = '';
@@ -91,6 +91,11 @@ class FileTransfer
             $dir = parse($dir);
             $sourceAbsPath = hostCurrentDir($source) . '/' . $dir . '/';
             $destAbsPath = hostCurrentDir($destination) . '/' . $dir . '/';
+
+            if (test('[ ! -d ' . $sourceAbsPath . ' ]')) {
+                warning($sourceAbsPath . ' does not exist on source.');
+                continue;
+            }
 
             if (hostsAreRemote($source, $destination)) {
                 $rsyncCommand = $this->rsyncCommand($source, $sourceAbsPath, $destination, $destAbsPath, false);
