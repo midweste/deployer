@@ -93,8 +93,8 @@ class WordpressCli
 
     public function command(string $command): string
     {
-        $wp = get('bin/wp', which('wp'));
         $host = $this->host;
+        $wp = $host->get('bin/wp', which('wp'));
         $command = sprintf('%s %s %s %s', $wp, $command,  $this->sitePath($host), $this->url($host));
         return $command;
     }
