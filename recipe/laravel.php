@@ -106,19 +106,19 @@ task('artisan:passport:keys', artisan('passport:keys'));
  */
 
 desc('Seeds the database with records');
-task('artisan:db:seed', artisan('db:seed --force', ['showOutput']));
+task('artisan:db:seed', artisan('db:seed --force', ['skipIfNoEnv', 'showOutput']));
 
 desc('Runs the database migrations');
 task('artisan:migrate', artisan('migrate --force', ['skipIfNoEnv']));
 
 desc('Drops all tables and re-run all migrations');
-task('artisan:migrate:fresh', artisan('migrate:fresh --force'));
+task('artisan:migrate:fresh', artisan('migrate:fresh --force', ['skipIfNoEnv']));
 
 desc('Rollbacks the last database migration');
-task('artisan:migrate:rollback', artisan('migrate:rollback --force', ['showOutput']));
+task('artisan:migrate:rollback', artisan('migrate:rollback --force', ['skipIfNoEnv', 'showOutput']));
 
 desc('Shows the status of each migration');
-task('artisan:migrate:status', artisan('migrate:status', ['showOutput']));
+task('artisan:migrate:status', artisan('migrate:status', ['skipIfNoEnv', 'showOutput']));
 
 /*
  * Cache and optimizations.
@@ -212,6 +212,22 @@ task('artisan:telescope:clear', artisan('telescope:clear'));
 
 desc('Prunes stale entries from the Telescope database');
 task('artisan:telescope:prune', artisan('telescope:prune'));
+
+/*
+ * Octane.
+ */
+
+desc('Starts the octane server');
+task('artisan:octane', artisan('octane:start'));
+
+desc('Reloads the octane server');
+task('artisan:octane:reload', artisan('octane:reload'));
+
+desc('Stops the octane server');
+task('artisan:octane:stop', artisan('octane:stop'));
+
+desc('Check the status of the octane server');
+task('artisan:octane:status', artisan('octane:status'));
 
 /**
  * Main deploy task.

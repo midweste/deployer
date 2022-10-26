@@ -4,6 +4,10 @@
 
 # Ms-teams Recipe
 
+```php
+require 'contrib/ms-teams.php';
+```
+
 [Source](/contrib/ms-teams.php)
 
 
@@ -85,6 +89,9 @@ after('deploy:failed', 'teams:notify:failure');
 
 Title of project
 
+```php title="Default value"
+return get('application', 'Project');
+```
 
 
 ### teams_text

@@ -2,42 +2,54 @@
 <!-- Instead edit recipe/magento2.php -->
 <!-- Then run bin/docgen -->
 
-# How to Deploy Magento 2
+# How to Deploy a Magento 2 Project
+
+```php
+require 'recipe/magento2.php';
+```
 
 [Source](/recipe/magento2.php)
 
-## How to deploy a Magento 2 project with zero downtime?
+Deployer is a free and open source deployment tool written in PHP. 
+It helps you to deploy your Magento 2 application to a server. 
+It is very easy to use and has a lot of features. 
 
-- First, [install](/docs/installation.md) the Deployer. 
-- Second, require `recipe/magento2.php` recipe into your _deploy.php_ or _deploy.yaml_ file.
-- Third, now you can have a zero downtime deployment!
+Three main features of Deployer are:
+- **Provisioning** - provision your server for you.
+- **Zero downtime deployment** - deploy your application without a downtime.
+- **Rollbacks** - rollback your application to a previous version, if something goes wrong.
 
-Did you know that you can deploy **Magento 2** project with a single command? Just execute `dep deploy`.
-Something went wrong? Just run `dep rollback` to rollback your changes.
-Also, you can take an advantage of the [Deployer's CLI](/docs/cli.md) to deploy your project.
+Additionally, Deployer has a lot of other features, like:
+- **Easy to use** - Deployer is very easy to use. It has a simple and intuitive syntax.
+- **Fast** - Deployer is very fast. It uses parallel connections to deploy your application.
+- **Secure** - Deployer uses SSH to connect to your server.
+- **Supports all major PHP frameworks** - Deployer supports all major PHP frameworks.
 
-Another cool feature of the Deployer is [provisioning](/docs/recipe/provision.md). Take any server, and run `dep provision` command.
-This command will configure webserver, databases, php, https, and more. 
-You will get everything you need to run your **Magento 2** application.
+You can read more about Deployer in [Getting Started](/docs/getting-started.md).
 
-Deployer does next steps to [deploy](#deploy) **Magento 2**:
-* Displays info about deployment
-* Prepares host for deploy
-* Locks deploy
-* Prepares release
-* Updates code
-* Creates symlinks for shared files and dirs
-* Makes writable dirs
-* Installs vendors
-* Cleanup files and/or directories
-* Compiles magento di
-* Deploys assets
-* Config Import
-* Upgrades magento database
-* Flushes Magento Cache
-* Creates symlink to release
-* Unlocks deploy
-* Cleanup old releases
+The [deploy](#deploy) task of **Magento 2** consists of:
+* [deploy:prepare](/docs/recipe/common.md#deployprepare) – Prepares a new release
+  * [deploy:info](/docs/recipe/deploy/info.md#deployinfo) – Displays info about deployment
+  * [deploy:setup](/docs/recipe/deploy/setup.md#deploysetup) – Prepares host for deploy
+  * [deploy:lock](/docs/recipe/deploy/lock.md#deploylock) – Locks deploy
+  * [deploy:release](/docs/recipe/deploy/release.md#deployrelease) – Prepares release
+  * [deploy:update_code](/docs/recipe/deploy/update_code.md#deployupdate_code) – Updates code
+  * [deploy:shared](/docs/recipe/deploy/shared.md#deployshared) – Creates symlinks for shared files and dirs
+  * [deploy:writable](/docs/recipe/deploy/writable.md#deploywritable) – Makes writable dirs
+* [deploy:vendors](/docs/recipe/deploy/vendors.md#deployvendors) – Installs vendors
+* [deploy:clear_paths](/docs/recipe/deploy/clear_paths.md#deployclear_paths) – Cleanup files and/or directories
+* [deploy:magento](/docs/recipe/magento2.md#deploymagento) – Magento2 deployment operations
+  * [magento:build](/docs/recipe/magento2.md#magentobuild) – Magento2 build operations
+    * [magento:compile](/docs/recipe/magento2.md#magentocompile) – Compiles magento di
+    * [magento:deploy:assets](/docs/recipe/magento2.md#magentodeployassets) – Deploys assets
+  * [magento:config:import](/docs/recipe/magento2.md#magentoconfigimport) – Config Import
+  * [magento:upgrade:db](/docs/recipe/magento2.md#magentoupgradedb) – Upgrades magento database
+  * [magento:cache:flush](/docs/recipe/magento2.md#magentocacheflush) – Flushes Magento Cache
+* [deploy:publish](/docs/recipe/common.md#deploypublish) – Publishes the release
+  * [deploy:symlink](/docs/recipe/deploy/symlink.md#deploysymlink) – Creates symlink to release
+  * [deploy:unlock](/docs/recipe/deploy/lock.md#deployunlock) – Unlocks deploy
+  * [deploy:cleanup](/docs/recipe/deploy/cleanup.md#deploycleanup) – Cleanup old releases
+  * [deploy:success](/docs/recipe/common.md#deploysuccess) – 
 
 
 The magento2 recipe is based on the [common](/docs/recipe/common.md) recipe.
@@ -84,6 +96,9 @@ Update using: `set('static_content_jobs', '1');`
 
 
 
+```php title="Default value"
+return time();
+```
 
 
 ### shared_files
@@ -138,13 +153,14 @@ Overrides [writable_dirs](/docs/recipe/deploy/writable.md#writable_dirs) from `r
     'var',
     'pub/static',
     'pub/media',
-    'generated'
+    'generated',
+    'var/page_cache'
 ]
 ```
 
 
 ### clear_paths
-[Source](https://github.com/deployphp/deployer/blob/master/recipe/magento2.php#L64)
+[Source](https://github.com/deployphp/deployer/blob/master/recipe/magento2.php#L65)
 
 Overrides [clear_paths](/docs/recipe/deploy/clear_paths.md#clear_paths) from `recipe/deploy/clear_paths.php`.
 
@@ -163,21 +179,32 @@ Overrides [clear_paths](/docs/recipe/deploy/clear_paths.md#clear_paths) from `re
 
 
 ### magento_version
-[Source](https://github.com/deployphp/deployer/blob/master/recipe/magento2.php#L73)
+[Source](https://github.com/deployphp/deployer/blob/master/recipe/magento2.php#L74)
 
 
 
+```php title="Default value"
+// detect version
+$versionOutput = run('{{bin/php}} {{release_or_current_path}}/bin/magento --version');
+preg_match('/(\d+\.?)+(-p\d+)?$/', $versionOutput, $matches);
+return $matches[0] ?? '2.0';
+```
 
 
 ### maintenance_mode_status_active
-[Source](https://github.com/deployphp/deployer/blob/master/recipe/magento2.php#L80)
+[Source](https://github.com/deployphp/deployer/blob/master/recipe/magento2.php#L81)
 
 
 
+```php title="Default value"
+// detect maintenance mode active
+$maintenanceModeStatusOutput = run("{{bin/php}} {{release_or_current_path}}/bin/magento maintenance:status");
+return strpos($maintenanceModeStatusOutput, MAINTENANCE_MODE_ACTIVE_OUTPUT_MSG) !== false;
+```
 
 
 ### enable_zerodowntime
-[Source](https://github.com/deployphp/deployer/blob/master/recipe/magento2.php#L87)
+[Source](https://github.com/deployphp/deployer/blob/master/recipe/magento2.php#L88)
 
 Deploy without setting maintenance mode if possible
 
@@ -190,7 +217,7 @@ true
 ## Tasks
 
 ### magento:compile
-[Source](https://github.com/deployphp/deployer/blob/master/recipe/magento2.php#L91)
+[Source](https://github.com/deployphp/deployer/blob/master/recipe/magento2.php#L92)
 
 Compiles magento di.
 
@@ -198,7 +225,7 @@ Tasks
 
 
 ### magento:deploy:assets
-[Source](https://github.com/deployphp/deployer/blob/master/recipe/magento2.php#L98)
+[Source](https://github.com/deployphp/deployer/blob/master/recipe/magento2.php#L99)
 
 Deploys assets.
 
@@ -206,7 +233,7 @@ Deploys assets.
 
 
 ### magento:sync:content_version
-[Source](https://github.com/deployphp/deployer/blob/master/recipe/magento2.php#L111)
+[Source](https://github.com/deployphp/deployer/blob/master/recipe/magento2.php#L112)
 
 Syncs content version.
 
@@ -214,7 +241,7 @@ Syncs content version.
 
 
 ### magento:maintenance:enable
-[Source](https://github.com/deployphp/deployer/blob/master/recipe/magento2.php#L121)
+[Source](https://github.com/deployphp/deployer/blob/master/recipe/magento2.php#L122)
 
 Enables maintenance mode.
 
@@ -222,7 +249,7 @@ Enables maintenance mode.
 
 
 ### magento:maintenance:disable
-[Source](https://github.com/deployphp/deployer/blob/master/recipe/magento2.php#L126)
+[Source](https://github.com/deployphp/deployer/blob/master/recipe/magento2.php#L127)
 
 Disables maintenance mode.
 
@@ -230,7 +257,7 @@ Disables maintenance mode.
 
 
 ### magento:config:import
-[Source](https://github.com/deployphp/deployer/blob/master/recipe/magento2.php#L131)
+[Source](https://github.com/deployphp/deployer/blob/master/recipe/magento2.php#L132)
 
 Config Import.
 
@@ -238,7 +265,7 @@ Config Import.
 
 
 ### magento:upgrade:db
-[Source](https://github.com/deployphp/deployer/blob/master/recipe/magento2.php#L166)
+[Source](https://github.com/deployphp/deployer/blob/master/recipe/magento2.php#L167)
 
 Upgrades magento database.
 
@@ -246,7 +273,7 @@ Upgrades magento database.
 
 
 ### magento:cache:flush
-[Source](https://github.com/deployphp/deployer/blob/master/recipe/magento2.php#L193)
+[Source](https://github.com/deployphp/deployer/blob/master/recipe/magento2.php#L194)
 
 Flushes Magento Cache.
 
@@ -254,7 +281,7 @@ Flushes Magento Cache.
 
 
 ### deploy:magento
-[Source](https://github.com/deployphp/deployer/blob/master/recipe/magento2.php#L198)
+[Source](https://github.com/deployphp/deployer/blob/master/recipe/magento2.php#L199)
 
 Magento2 deployment operations.
 
@@ -269,7 +296,7 @@ This task is group task which contains next tasks:
 
 
 ### magento:build
-[Source](https://github.com/deployphp/deployer/blob/master/recipe/magento2.php#L206)
+[Source](https://github.com/deployphp/deployer/blob/master/recipe/magento2.php#L207)
 
 Magento2 build operations.
 
@@ -282,7 +309,7 @@ This task is group task which contains next tasks:
 
 
 ### deploy
-[Source](https://github.com/deployphp/deployer/blob/master/recipe/magento2.php#L212)
+[Source](https://github.com/deployphp/deployer/blob/master/recipe/magento2.php#L213)
 
 Deploys your project.
 

@@ -4,6 +4,10 @@
 
 # Website Recipe
 
+```php
+require 'recipe/provision/website.php';
+```
+
 [Source](/recipe/provision/website.php)
 
 
@@ -13,6 +17,9 @@
 
 
 
+```php title="Default value"
+return ask(' Domain: ');
+```
 
 
 ### public_path
@@ -20,6 +27,9 @@
 
 
 
+```php title="Default value"
+return ask(' Public path: ', 'public');
+```
 
 
 

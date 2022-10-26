@@ -4,6 +4,10 @@
 
 # Crontab Recipe
 
+```php
+require 'contrib/crontab.php';
+```
+
 [Source](/contrib/crontab.php)
 
 
@@ -35,6 +39,9 @@ add('crontab:jobs', [
 
 Get path to bin
 
+```php title="Default value"
+return which('crontab');
+```
 
 
 

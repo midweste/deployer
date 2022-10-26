@@ -84,7 +84,6 @@ task('deploy:release', function () {
 
     // Clean up if there is unfinished release.
     if (test('[ -h release ]')) {
-        run('rm -rf "$(readlink release)"'); // Delete release.
         run('rm release'); // Delete symlink.
     }
 
@@ -97,7 +96,16 @@ task('deploy:release', function () {
 
     // Check what there is no such release path.
     if (test("[ -d $releasePath ]")) {
-        throw new Exception("Release name \"$releaseName\" already exists.\nRelease name can be overridden via:\n dep deploy -o release_name=$releaseName");
+        $freeReleaseName = '...';
+        // Check what $releaseName is integer.
+        if (ctype_digit($releaseName)) {
+            $freeReleaseName = intval($releaseName);
+            // Find free release name.
+            while (test("[ -d releases/$freeReleaseName ]")) {
+                $freeReleaseName++;
+            }
+        }
+        throw new Exception("Release name \"$releaseName\" already exists.\nRelease name can be overridden via:\n dep deploy -o release_name=$freeReleaseName");
     }
 
     // Save release_name.
@@ -115,8 +123,8 @@ task('deploy:release', function () {
     ];
 
     // Save metainfo about release.
-    $json = json_encode($metainfo);
-    run("echo '$json' >> .dep/releases_log");
+    $json = escapeshellarg(json_encode($metainfo));
+    run("echo $json >> .dep/releases_log");
 
     // Make new release.
     run("mkdir -p $releasePath");
