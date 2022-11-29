@@ -133,9 +133,16 @@ class Mysql
             $value = $host->get($key);
 
             $shortKey = str_replace('mysql_', '', $key);
-            $credentials->{$shortKey} = $value;
+            $credentials->{$shortKey} = $this->cleanValue($value);
         }
         return $credentials;
+    }
+
+    protected function cleanValue(string $value): string
+    {
+        $value = str_replace('`', '\`', $value);
+        $value = str_replace('"', '\"', $value);
+        return $value;
     }
 
     protected function hostPortUserPassword(object $creds): string
