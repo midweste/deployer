@@ -357,15 +357,6 @@ function within(string $path, callable $callback)
  */
 function run(string $command, ?array $options = [], ?int $timeout = null, ?int $idle_timeout = null, ?string $secret = null, ?array $env = null, ?bool $real_time_output = false, ?bool $no_throw = false): string
 {
-    $dryRun = get('dry-run', false) || input()->getOption('dry-run');
-    if ($dryRun) {
-        writeln('[<info>dry-run</info>] ' . $command);
-        return $command;
-        $bashTest = preg_match('/[[:blank:]]*\[\[?[[:blank:]]*[^\]]*\]?\][[:blank:]]*/', $command);
-        if (!$bashTest) {
-            return $command;
-        }
-    }
     $namedArguments = [];
     foreach (['timeout', 'idle_timeout', 'secret', 'env', 'real_time_output', 'no_throw'] as $arg) {
         if ($$arg !== null) {
@@ -450,16 +441,6 @@ function run(string $command, ?array $options = [], ?int $timeout = null, ?int $
  */
 function runLocally(string $command, ?array $options = [], ?int $timeout = null, ?int $idle_timeout = null, ?string $secret = null, ?array $env = null, ?string $shell = null): string
 {
-    $dryRun = get('dry-run', false) || input()->getOption('dry-run');
-    if ($dryRun) {
-        writeln('[<info>dry-run</info>] ' . $command);
-        return $command;
-        $bashTest = preg_match('/[[:blank:]]*\[\[?[[:blank:]]*[^\]]*\]?\][[:blank:]]*/', $command);
-        if (!$bashTest) {
-            return $command;
-        }
-    }
-
     $namedArguments = [];
     foreach (['timeout', 'idle_timeout', 'secret', 'env', 'shell'] as $arg) {
         if ($$arg !== null) {
@@ -896,11 +877,6 @@ function commandSupportsOption(string $command, string $option): bool
  */
 function which(string $name): string
 {
-    $dryRun = get('dry-run', false) || input()->getOption('dry-run');
-    if ($dryRun) {
-        return $name;
-    }
-
     $nameEscaped = escapeshellarg($name);
 
     // Try `command`, should cover all Bourne-like shells

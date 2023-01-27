@@ -92,9 +92,6 @@ class Deployer extends Container
         $console->getDefinition()->addOption(
             new InputOption('file', 'f', InputOption::VALUE_REQUIRED, 'Recipe file path')
         );
-        $console->getDefinition()->addOption(
-            new InputOption('dry-run', '-d', InputOption::VALUE_NONE, 'Display commands instead of running them')
-        );
 
         $this['console'] = function () use ($console) {
             return $console;
