@@ -19,10 +19,6 @@ use Deployer\Utility\Httpie;
  */
 function whichLocal(string $name): string
 {
-    if (get('dry-run', false) || input()->getOption('dry-run')) {
-        return $name;
-    }
-
     $nameEscaped = escapeshellarg($name);
 
     // Try `command`, should cover all Bourne-like shells
@@ -166,11 +162,6 @@ function slack(string $template, $success = false): void
         'color' => ($success) ? get('slack_success_color') : get('slack_color'),
         'mrkdwn_in' => ['text'],
     ];
-
-    if (get('dry-run', false) || input()->getOption('dry-run')) {
-        writeln(var_export($attachment, true));
-        return;
-    }
 
     $result = Httpie::post(get('slack_webhook'))->jsonBody(['attachments' => [$attachment]])->send();
     checkSlackAnswer($result);

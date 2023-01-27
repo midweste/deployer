@@ -77,11 +77,6 @@ class Mysql
 
     protected function whichLocally(string $name): string
     {
-        $dryRun = get('dry-run', false) || input()->getOption('dry-run');
-        if ($dryRun) {
-            return $name;
-        }
-
         $nameEscaped = escapeshellarg($name);
 
         // Try `command`, should cover all Bourne-like shells
@@ -232,14 +227,7 @@ class Mysql
 
         $tablesCommand = $connection . " -e 'SHOW TABLES' ";
 
-        $dryRun = get('dry-run', false);
-        if ($dryRun) {
-            set('dry-run', false);
-        }
         $tables = runLocally($tablesCommand);
-        if ($dryRun) {
-            set('dry-run', true);
-        }
 
         $tableArray = explode(PHP_EOL, $tables);
         unset($tableArray[0]); // removes 'Tables in dbname' entry

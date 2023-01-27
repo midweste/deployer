@@ -108,20 +108,6 @@ class FileTransfer
     }
 }
 
-task('test:files:pull', function () {
-    $dryrun = get('dry-run');
-    set('dry-run', true);
-
-    $server = new FileTransfer();
-    writeln('Pull to localhost from remote server');
-    $server->pullSharedWritable(currentHost(), hostLocalhost());
-
-    writeln('Pull to remote server from remote server');
-    $server->pullSharedWritable(currentHost(), hostFromStage('staging'));
-
-    set('dry-run', $dryrun);
-})->desc('Tests local and remote file transfer');
-
 task('files:pull', function () {
     $server = new FileTransfer();
     $server->pullSharedWritable(currentHost(), hostLocalhost());
