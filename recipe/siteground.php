@@ -72,8 +72,7 @@ task('deploy', [
     'deploy:clear_paths',
     'deploy:harden',
     'deploy:publish',
-    'sg:purge',
-    'wp:cache:flush',
+    'sg:purge'
 ])->desc('Deploys your project');
 
 /**
@@ -92,10 +91,18 @@ task('sg', function () {
     run($command, ['real_time_output' => true]);
 })->desc('Show the siteground cli options');
 
+task('sg:purge:transient', function () {
+    $wpcli = new WordpressCli(currentHost());
+    $command = $wpcli->command('transient delete --all');
+    run($command);
+})->desc('Purge wp transients');
+
 task('sg:purge', function () {
+    invoke('sg:purge:transient');
+    invoke('wp:cache:flush');
     invoke('sg:purge:memcached');
     invoke('sg:purge:dynamic');
-})->desc('Purge the Siteground dynamic and memcached caches');
+})->desc('Purge the transients, wp cache, and Siteground dynamic and memcached caches');
 
 task('sg:purge:dynamic', function () {
     $wpcli = new WordpressCli(currentHost());
