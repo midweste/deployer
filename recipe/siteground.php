@@ -72,8 +72,8 @@ task('deploy', [
     'deploy:clear_paths',
     'deploy:harden',
     'deploy:publish',
+    'sg:purge',
     'wp:cache:flush',
-
 ])->desc('Deploys your project');
 
 /**
@@ -85,3 +85,26 @@ after('deploy:failed', function () {
     invoke('deploy:unharden');
 });
 after('deploy:symlink', 'deploy:clear_server_paths');
+
+task('sg', function () {
+    $wpcli = new WordpressCli(currentHost());
+    $command = $wpcli->command('sg');
+    run($command, ['real_time_output' => true]);
+})->desc('Show the siteground cli options');
+
+task('sg:purge', function () {
+    invoke('sg:purge:memcached');
+    invoke('sg:purge:dynamic');
+})->desc('Purge the Siteground dynamic and memcached caches');
+
+task('sg:purge:dynamic', function () {
+    $wpcli = new WordpressCli(currentHost());
+    $command = $wpcli->command('sg purge');
+    run($command);
+})->desc('Purge the Siteground dynamic cache');
+
+task('sg:purge:memcached', function () {
+    $wpcli = new WordpressCli(currentHost());
+    $command = $wpcli->command('sg purge memcached');
+    run($command);
+})->desc('Purge the Siteground memcached cache');
