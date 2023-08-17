@@ -121,7 +121,11 @@ task('wp:cache:warm', function () {
     $wpcli->cacheWarm();
 })->desc('Warm external edge cache cache');
 
-
+task('wp:as:clean', function () {
+    $wpcli = new WordpressCli(currentHost());
+    $command = $wpcli->command('action-scheduler clean --status=complete,failed,canceled --before="2 days ago"');
+    run($command);
+})->desc('Clear action scheduler logs etc');
 
 // function wpcliSitePath(Host $host): string
 // {
