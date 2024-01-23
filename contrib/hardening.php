@@ -23,7 +23,7 @@ Set hardened permissions on source files and folders
 before('deploy:publish', 'deploy:harden'); // Harden permissions before releasing
 before('deploy:cleanup', 'deploy:unharden'); // Need to unharden permissions to allow old release removal
 after('deploy:failed', 'deploy:unharden'); // Need to unharded permissions to remove hanging release
-after('deploy:harden', 'deploy:writable'); // Apply writable permissions to files/folders in harden_writable_files
+after('deploy:harden', 'deploy:writablehardened'); // Apply writable permissions to files/folders in harden_writable_files
 ```
 
  */
@@ -152,7 +152,7 @@ task('deploy:unharden', function () {
     }
 })->desc('Unhardens old releases before deploy:cleanup to allow removal of read only files/dirs');
 
-task('deploy:writable', function () {
+task('deploy:writablehardened', function () {
     $files = get('harden_writable_files', []);
     foreach ($files as $file) {
         writable($file);

@@ -85,7 +85,7 @@ before('deploy:cleanup', function () {
 })->desc('Unharden previous site releases');
 
 after('deploy:harden', function () {
-    invoke('deploy:writable');
+    invoke('deploy:writablehardened');
 })->desc('Apply writable permissions to files/folders in harden_writable_files');
 
 after('deploy:failed', function () {
