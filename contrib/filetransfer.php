@@ -60,16 +60,20 @@ class FileTransfer
         $port = '';
         if ($source instanceof Localhost || hostsOnSameServer($source, $destination)) {
             $sourceUri = parse($sourcePath);
-        } else {
+        } elseif (!is_null($source->get('config_file'))) {
+            $port = "-e \"ssh -F " . $source->get('config_file') . "\"";
+        } elseif (!is_null($source->getPort())) {
             $port = "-e \"ssh -p " . $source->getPort() . "\"";
-            $sourceUri = $source->getRemoteUser() . '@' . $source->getHostname() . ':' . parse($sourcePath);
         }
 
         // destination
+        $destinationUri = $destination->getRemoteUser() . '@' . $destination->getHostname() . ':' . parse($destinationPath);
         if ($destination instanceof Localhost || hostsOnSameServer($source, $destination)) {
             $destinationUri = parse($destinationPath);
-        } else {
-            $destinationUri = $destination->getRemoteUser() . '@' . $destination->getHostname() . ':' . parse($destinationPath);
+        } elseif (!is_null($destination->get('config_file'))) {
+            $port = "-e \"ssh -F " . $destination->get('config_file') . "\"";
+        } elseif (!is_null($destination->getPort())) {
+            $port = "-e \"ssh -p " . $destination->getPort() . "\"";
         }
 
         $command = "$rsync $port $switches $excludes $sourceUri $destinationUri";

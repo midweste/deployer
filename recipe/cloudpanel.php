@@ -4,14 +4,13 @@ namespace Deployer;
 
 require_once __DIR__ . '/common.php';
 
-// require_once __DIR__ . '/../contrib/pause.php';
 require_once __DIR__ . '/../contrib/clearserverpaths.php';
 require_once __DIR__ . '/../contrib/filetransfer.php';
 require_once __DIR__ . '/../contrib/hardening.php';
 require_once __DIR__ . '/../contrib/mysql.php';
 require_once __DIR__ . '/../contrib/wordpresscli.php';
 
-add('recipes', ['siteground']);
+add('recipes', ['cloudpanel']);
 
 /**
  * Siteground configuration
@@ -25,26 +24,6 @@ set('harden_dir_permissions', 'u=rx,g=rx,o=rx');
 set('harden_file_permissions', 'u=r,g=r,o=r');
 /* ----------------- clear_server_paths ----------------- */
 set('clear_server_paths', []);
-/* ----------------- pause ----------------- */
-// set('pause_seconds', 5);
-
-/**
- * Siteground bin overrides
- */
-set('bin/composer', function () {
-    if (test('[ -f {{deploy_path}}/.dep/composer.phar ]')) {
-        return '{{bin/php}} {{deploy_path}}/.dep/composer.phar';
-    }
-
-    if (commandExist('composer')) {
-        return which('composer'); // sg uses a wrapper script
-    }
-
-    warning("Composer binary wasn't found. Installing latest composer to \"{{deploy_path}}/.dep/composer.phar\".");
-    run("cd {{deploy_path}} && curl -sS https://getcomposer.org/installer | {{bin/php}}");
-    run('mv {{deploy_path}}/composer.phar {{deploy_path}}/.dep/composer.phar');
-    return '{{bin/php}} {{deploy_path}}/.dep/composer.phar';
-});
 
 /**
  * Deploy task
@@ -74,7 +53,7 @@ task('deploy', [
     'deploy:clear_paths',
     'deploy:harden',
     'deploy:publish',
-    'sg:purge'
+    'cp:purge'
 ])->desc('Deploys your project');
 
 /**
@@ -99,33 +78,33 @@ task('pull-all', [
     'files:pull',
 ])->desc('Pull db from a remote stage, replaces instances of domain in db, and pulls writable files');
 
-task('sg', function () {
-    $wpcli = new WordpressCli(currentHost());
-    $command = $wpcli->command('sg');
-    run($command, ['real_time_output' => true]);
-})->desc('Show the siteground cli options');
+// task('cp', function () {
+//     $wpcli = new WordpressCli(currentHost());
+//     $command = $wpcli->command('cp');
+//     run($command, ['real_time_output' => true]);
+// })->desc('Show the siteground cli options');
 
-task('sg:purge:transient', function () {
+task('cp:purge:transient', function () {
     $wpcli = new WordpressCli(currentHost());
     $command = $wpcli->command('transient delete --all');
     run($command);
 })->desc('Purge wp transients');
 
-task('sg:purge', function () {
-    // invoke('sg:purge:transient');
+task('cp:purge', function () {
+    invoke('cp:purge:transient');
     invoke('wp:cache:flush');
     // invoke('sg:purge:memcached');
     // invoke('sg:purge:dynamic');
 })->desc('Purge the transients, wp cache, and Siteground dynamic and memcached caches');
 
-task('sg:purge:dynamic', function () {
-    $wpcli = new WordpressCli(currentHost());
-    $command = $wpcli->command('sg purge');
-    run($command);
-})->desc('Purge the Siteground dynamic cache');
+// task('sg:purge:dynamic', function () {
+//     $wpcli = new WordpressCli(currentHost());
+//     $command = $wpcli->command('sg purge');
+//     run($command);
+// })->desc('Purge the Siteground dynamic cache');
 
-task('sg:purge:memcached', function () {
-    $wpcli = new WordpressCli(currentHost());
-    $command = $wpcli->command('sg purge memcached');
-    run($command);
-})->desc('Purge the Siteground memcached cache');
+// task('sg:purge:memcached', function () {
+//     $wpcli = new WordpressCli(currentHost());
+//     $command = $wpcli->command('sg purge memcached');
+//     run($command);
+// })->desc('Purge the Siteground memcached cache');
