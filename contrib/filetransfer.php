@@ -27,7 +27,7 @@ namespace Deployer;
 use Deployer\Host\Host;
 use Deployer\Host\Localhost;
 
-set('filetransfer_rsync_switches', '-rlztv --progress --size-only --ipv4 --delete --ignore-missing-args');
+set('filetransfer_rsync_switches', '-rlztv --dry-run --progress --delete'); // '-rlztv --progress --size-only --ipv4 --delete --ignore-missing-args'
 set('filetransfer_rsync_excludes', []);
 
 class FileTransfer
@@ -40,12 +40,12 @@ class FileTransfer
             throw error("Hosts source and destination cannot be the same host when pulling files");
         }
 
-        if (hostsAreRemote($source, $destination) && !hostsOnSameServer($source, $destination)) {
-            throw error("Hosts source and destination cannot be remote and on different servers");
-        }
+        // if (hostsAreRemote($source, $destination) && !hostsOnSameServer($source, $destination)) {
+        //     throw error("Hosts source and destination cannot be remote and on different servers");
+        // }
 
         $rsync = whichContextual('rsync', $local);
-        $switches = get('filetransfer_rsync_switches', '-rlztv --progress --size-only --ipv4 --delete --ignore-missing-args');  # --delete-after? --delete-before?
+        $switches = get('filetransfer_rsync_switches', '--dry-run --progress');
 
         $rsyncExcludes = get('filetransfer_rsync_excludes', []);
         $excludes = '';
@@ -57,26 +57,36 @@ class FileTransfer
 
         // source
         $sourceUri = $source->getRemoteUser() . '@' . $source->getHostname() . ':' . parse($sourcePath);
-        $port = '';
         if ($source instanceof Localhost || hostsOnSameServer($source, $destination)) {
             $sourceUri = parse($sourcePath);
-        } elseif (!is_null($source->get('config_file'))) {
-            $port = "-e \"ssh -F " . $source->get('config_file') . "\"";
+        }
+
+        // destination always local
+        // $destinationUri = $destination->getRemoteUser() . '@' . $destination->getHostname() . ':' . parse($destinationPath);
+        // if ($destination instanceof Localhost || hostsOnSameServer($source, $destination)) {
+        $destinationUri = parse($destinationPath);
+        // }
+
+        // config or port
+        $sshSwitches = '';
+        $sshConfigFile = '';
+        if (!is_null($source->get('config_file')) || !is_null($destination->get('config_file'))) {
+            $configFiles = [];
+            $configFiles[] = $source->get('config_file', '');
+            $configFiles[] = $destination->get('config_file', '');
+
+            $configFiles = array_unique(array_filter($configFiles));
+            $config_file = sys_get_temp_dir() . '/ssh_combined_config';
+            $sshConfigFile = 'cat ' . implode(' ', $configFiles) . ' > ' . $config_file . ';';
+            $sshSwitches = "-e \"ssh -F " . $config_file . "\"";
         } elseif (!is_null($source->getPort())) {
-            $port = "-e \"ssh -p " . $source->getPort() . "\"";
+            $sshSwitches = "-e \"ssh -p " . $source->getPort() . "\"";
         }
+        // $options = $source->connectionOptionsString();
+        // warning($options);
 
-        // destination
-        $destinationUri = $destination->getRemoteUser() . '@' . $destination->getHostname() . ':' . parse($destinationPath);
-        if ($destination instanceof Localhost || hostsOnSameServer($source, $destination)) {
-            $destinationUri = parse($destinationPath);
-        } elseif (!is_null($destination->get('config_file'))) {
-            $port = "-e \"ssh -F " . $destination->get('config_file') . "\"";
-        } elseif (!is_null($destination->getPort())) {
-            $port = "-e \"ssh -p " . $destination->getPort() . "\"";
-        }
-
-        $command = "$rsync $port $switches $excludes $sourceUri $destinationUri";
+        $command = "$sshConfigFile $rsync $sshSwitches $switches $excludes $sourceUri $destinationUri";
+        warning($command);
         return $command;
     }
 
@@ -103,12 +113,14 @@ class FileTransfer
 
             if (hostsAreRemote($source, $destination)) {
                 $rsyncCommand = $this->rsyncCommand($source, $sourceAbsPath, $destination, $destAbsPath, false);
-                run($rsyncCommand);
+                // run($rsyncCommand);
             } else {
                 $rsyncCommand = $this->rsyncCommand($source, $sourceAbsPath, $destination, $destAbsPath, true);
-                runLocally($rsyncCommand);
+                // runLocally($rsyncCommand);
             }
+            warning($rsyncCommand);
         }
+        exit;
     }
 }
 
