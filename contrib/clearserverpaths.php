@@ -57,18 +57,20 @@ class ClearServerPaths
                 continue;
             }
 
+
+            $rmdirCommand = "$sudo rm -rf \"$path\"";
+            run($rmdirCommand);
+
             // Added non-standard option -mindepth 1 in order to prevent the search root directory to be removed
             // $clearCommand = "$sudo find \"$path\" -mindepth 1";
             // run($clearCommand, ['real_time_output' => true]);
 
             // $clearCommand = "{$sudo}find $path -mindepth 1 -delete";
-            $clearCommand = "{$sudo}find $path -delete";
+            // $clearCommand = "{$sudo}find $path -delete";
             // warning($clearCommand);
-            run($clearCommand, ['no_throw' => true]);
+            // run($clearCommand, ['no_throw' => true]);
 
-            // Not sure why, but the trust rm -rf was returning directory not empty and failing
-            //$rmdirCommand = "$sudo rm -rf \"$path\"";
-            //run($rmdirCommand);
+
         }
         // $chunks = array_chunk($commands, $batch);
         // foreach ($chunks as $chunk) {

@@ -9,8 +9,9 @@ require_once __DIR__ . '/../contrib/filetransfer.php';
 require_once __DIR__ . '/../contrib/hardening.php';
 require_once __DIR__ . '/../contrib/mysql.php';
 require_once __DIR__ . '/../contrib/wordpresscli.php';
+require_once __DIR__ . '/../contrib/git.php';
 
-add('recipes', ['cloudpanel']);
+add('recipes', ['devstageprod']);
 
 /**
  * Siteground configuration
@@ -47,18 +48,29 @@ set('clear_server_paths', []);
 //     'deploy:success',
 // ]);
 
+// desc('Deploys your project');
+// task('deploy', [
+//     'deploy:prepare',
+//     'deploy:publish',
+// ]);
+
 task('deploy', [
     'deploy:prepare',
     'deploy:vendors',
     'deploy:clear_paths',
     'deploy:harden',
     'deploy:publish',
-    'cp:purge'
 ])->desc('Deploys your project');
 
 /**
  * Hooks
  */
+after('deploy:symlink', 'deploy:clear_server_paths');
+
+/* ----------------- git ----------------- */
+after('deploy:publish', 'git:tag');
+
+/* ----------------- hardening ----------------- */
 before('deploy:cleanup', function () {
     invoke('deploy:unharden');
 })->desc('Unharden previous site releases');
@@ -71,40 +83,43 @@ after('deploy:failed', function () {
     invoke('deploy:unlock');
     invoke('deploy:unharden');
 })->desc('Unlock after deploy:failed and unharded failed release');
-after('deploy:symlink', 'deploy:clear_server_paths');
 
+/* ----------------- staging ----------------- */
 task('pull-all', [
     'db:pull-replace',
     'files:pull',
 ])->desc('Pull db from a remote stage, replaces instances of domain in db, and pulls writable files');
 
-// task('cp', function () {
-//     $wpcli = new WordpressCli(currentHost());
-//     $command = $wpcli->command('cp');
-//     run($command, ['real_time_output' => true]);
-// })->desc('Show the siteground cli options');
+task('staging:files:pull', function () {
+    $files = new FileTransfer();
+    $files->pullSharedWritable(currentHost(), hostFromStage('staging'));
+})->desc('Remove writable staging directories, copy writable directories from production to staging');
 
-task('cp:purge:transient', function () {
-    $wpcli = new WordpressCli(currentHost());
-    $command = $wpcli->command('transient delete --all');
+task('staging:db:pull-replace', function () {
+    $mysql = new Mysql();
+    $mysql->pullReplace(currentHost(), hostFromStage('staging'));
+})->desc('Truncate staging db, pull db from a production, find/replace production with staging domain');
+
+task('staging:pull-all', [
+    'staging:db:pull-replace',
+    'staging:files:pull',
+])->desc('Copy writable directories from production to staging and truncate staging db, pull db from a production, find/replace production with staging domain');
+
+/* ----------------- wordpresscli ----------------- */
+after('deploy:publish', 'wp:cache:flush');
+
+after('files:pull', 'wp:cache:flush');
+
+after('db:pull-replace', 'wp:cache:flush');
+
+after('staging:files:pull', function () {
+    $wpcli = new WordpressCli(hostFromStage('staging'));
+    $command = $wpcli->command('cache flush');
     run($command);
-})->desc('Purge wp transients');
+});
 
-task('cp:purge', function () {
-    invoke('cp:purge:transient');
-    invoke('wp:cache:flush');
-    // invoke('sg:purge:memcached');
-    // invoke('sg:purge:dynamic');
-})->desc('Purge the transients, wp cache, and Siteground dynamic and memcached caches');
-
-// task('sg:purge:dynamic', function () {
-//     $wpcli = new WordpressCli(currentHost());
-//     $command = $wpcli->command('sg purge');
-//     run($command);
-// })->desc('Purge the Siteground dynamic cache');
-
-// task('sg:purge:memcached', function () {
-//     $wpcli = new WordpressCli(currentHost());
-//     $command = $wpcli->command('sg purge memcached');
-//     run($command);
-// })->desc('Purge the Siteground memcached cache');
+after('staging:db:pull-replace', function () {
+    $wpcli = new WordpressCli(hostFromStage('staging'));
+    $command = $wpcli->command('cache flush');
+    run($command);
+});

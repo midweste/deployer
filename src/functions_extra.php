@@ -7,12 +7,11 @@ namespace Deployer;
 use Deployer\Host\Host;
 use Deployer\Host\HostCollection;
 use Deployer\Host\Localhost;
-use Deployer\Utility\Httpie;
 
 /* ----------------- Helper Functions ----------------- */
 
 /**
- * Copy of which but ran locally
+ * Which ran locally
  *
  * @param string $name
  * @return void
@@ -148,21 +147,4 @@ function hostsAreSame(Host $host1, Host $host2): bool
     $deploy1 = $host1->getDeployPath();
     $deploy2 = $host2->getDeployPath();
     return ($same && $deploy1 === $deploy2) ? true : false;
-}
-
-function slack(string $template, $success = false): void
-{
-    if (!get('slack_webhook', false)) {
-        return;
-    }
-
-    $attachment = [
-        'title' => get('slack_title'),
-        'text' => get('slack_message', $template), // fake key just to allow for token replacement
-        'color' => ($success) ? get('slack_success_color') : get('slack_color'),
-        'mrkdwn_in' => ['text'],
-    ];
-
-    $result = Httpie::post(get('slack_webhook'))->jsonBody(['attachments' => [$attachment]])->send();
-    checkSlackAnswer($result);
 }

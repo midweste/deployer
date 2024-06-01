@@ -28,7 +28,7 @@ use Deployer\Host\Host;
 use Deployer\Host\Localhost;
 use Symfony\Component\Console\Input\InputOption;
 
-option('wp', null, InputOption::VALUE_REQUIRED, 'Command to execute via wp cli');
+option('command', null, InputOption::VALUE_REQUIRED, 'Command to execute via wp cli');
 
 class WordpressCli
 {
@@ -101,8 +101,8 @@ class WordpressCli
 }
 
 task('wp', function () {
-    if (!input()->hasOption('wp') || empty(input()->getOption('wp'))) {
-        throw error('Wp command requires option wp. For example dep wp --wp="cli version".');
+    if (!input()->hasOption('command') || empty(input()->getOption('command'))) {
+        throw error('Wp command requires option command. For example dep wp --command="cli version".');
     }
 
     $wpcli = new WordpressCli(currentHost());
@@ -125,33 +125,15 @@ task('wp:as:clean', function () {
     $wpcli = new WordpressCli(currentHost());
     $command = $wpcli->command('action-scheduler clean --status=complete,failed,canceled --before="2 days ago"');
     run($command);
-})->desc('Clear action scheduler logs etc');
+})->desc('Clear action scheduler logs that are complete, failed, or cancelled older than 2 days');
 
-// function wpcliSitePath(Host $host): string
-// {
-//     $deployPath = ($host instanceof Localhost) ? $host->getDeployPath() : $host->get('current_path');
-//     $root = $host->get('wpcli_webroot', '');
-//     $rootPath = (!empty($root)) ? $deployPath . '/' . $root : $deployPath;
-//     if (empty($rootPath)) {
-//         return '';
-//     }
+task('wp:transient:flush', function () {
+    $wpcli = new WordpressCli(currentHost());
+    $command = $wpcli->command('transient delete --all');
+    run($command);
+})->desc('Purge wp transients');
 
-//     $option = sprintf('--path="%s"', $rootPath);
-//     return $option;
-// }
-
-// function wpcliUrl(Host $host): string
-// {
-//     $url = $host->get('wpcli_domain', '');
-//     if (empty($url)) {
-//         return '';
-//     }
-//     $option = sprintf('--url="%s"', $url);
-//     return $option;
-// }
-
-// function wpcliCommand(Host $host, string $command): string
-// {
-//     $command = sprintf('wp %s %s %s', $command,  wpcliSitePath($host), wpcliUrl($host));
-//     return $command;
-// }
+task('wp:flushall', function () {
+    invoke('wp:transient:flush');
+    invoke('wp:cache:flush');
+})->desc('Purge the transients, wp cache');
