@@ -108,18 +108,30 @@ task('staging:pull-all', [
 /* ----------------- wordpresscli ----------------- */
 after('deploy:publish', 'wp:cache:flush');
 
-after('files:pull', 'wp:cache:flush');
+after('files:pull', function () {
+    $host = hostLocalhost();
+    $wpcli = new WordpressCli($host);
+    $command = $wpcli->command('cache flush');
+    runContextually($host, $command);
+});
 
-after('db:pull-replace', 'wp:cache:flush');
+after('db:pull-replace', function () {
+    $host = hostLocalhost();
+    $wpcli = new WordpressCli($host);
+    $command = $wpcli->command('cache flush');
+    runContextually($host, $command);
+});
 
 after('staging:files:pull', function () {
-    $wpcli = new WordpressCli(hostFromStage('staging'));
+    $host = hostFromStage('staging');
+    $wpcli = new WordpressCli($host);
     $command = $wpcli->command('cache flush');
-    run($command);
+    runContextually($host, $command);
 });
 
 after('staging:db:pull-replace', function () {
-    $wpcli = new WordpressCli(hostFromStage('staging'));
+    $host = hostFromStage('staging');
+    $wpcli = new WordpressCli($host);
     $command = $wpcli->command('cache flush');
-    run($command);
+    runContextually($host, $command);
 });

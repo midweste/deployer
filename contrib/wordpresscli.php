@@ -83,7 +83,7 @@ class WordpressCli
             throw error('No temporary directory could be found.');
         }
 
-        $wget = whichLocal('wget');
+        $wget = whichContextual('wget', $host);
         // --nocache  --limit-rate=1024k
         $command = "$wget -e robots=off -nv --ignore-length --no-check-certificate --directory-prefix=\"$tmp/wget\" --spider --recursive --no-directories --domains=$url --content-disposition --reject-regex \"(.*)\?(.*)\"  $scheme://$url/";
         //wget --directory-prefix=/tmp --spider --recursive --no-directories --domains=www.thecleanbedroom.com --content-disposition --reject-regex "(.*)\?(.*)" --limit-rate=1024k https://www.thecleanbedroom.com/
@@ -94,7 +94,7 @@ class WordpressCli
     public function command(string $command): string
     {
         $host = $this->host;
-        $wp = $host->get('bin/wp', which('wp'));
+        $wp = whichContextual('wp', $host);
         $command = sprintf('%s %s %s %s', $wp, $command,  $this->sitePath($host), $this->url($host));
         return $command;
     }

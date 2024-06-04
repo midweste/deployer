@@ -27,15 +27,14 @@ namespace Deployer;
 use Deployer\Host\Host;
 use Deployer\Host\Localhost;
 
-set('filetransfer_rsync_switches', '-rlztv --dry-run --progress --delete'); // '-rlztv --progress --size-only --ipv4 --delete --ignore-missing-args'
+set('filetransfer_rsync_switches', '-rlztv --delete'); // '-rlztv --progress --size-only --ipv4 --delete --ignore-missing-args'
 set('filetransfer_rsync_excludes', []);
 
 class FileTransfer
 {
 
-    public function rsyncCommand(Host $source, string $sourcePath, Host $destination, string $destinationPath, bool $local = true): string
+    public function rsyncCommand(Host $source, string $sourcePath, Host $destination, string $destinationPath): string
     {
-
         if (hostsAreSame($source, $destination)) {
             throw error("Hosts source and destination cannot be the same host when pulling files");
         }
@@ -44,8 +43,8 @@ class FileTransfer
         //     throw error("Hosts source and destination cannot be remote and on different servers");
         // }
 
-        $rsync = whichContextual('rsync', $local);
-        $switches = get('filetransfer_rsync_switches', '--dry-run --progress');
+        $rsync = whichContextual('rsync', $destination);
+        $switches = get('filetransfer_rsync_switches', '-rlztv --delete --dry-run');
 
         $rsyncExcludes = get('filetransfer_rsync_excludes', []);
         $excludes = '';
@@ -70,23 +69,23 @@ class FileTransfer
         // config or port
         $sshSwitches = '';
         $sshConfigFile = '';
-        if (!is_null($source->get('config_file')) || !is_null($destination->get('config_file'))) {
-            $configFiles = [];
-            $configFiles[] = $source->get('config_file', '');
-            $configFiles[] = $destination->get('config_file', '');
+        // if (!is_null($source->get('config_file')) || !is_null($destination->get('config_file'))) {
+        //     $configFiles = [];
+        //     $configFiles[] = $source->get('config_file', '');
+        //     $configFiles[] = $destination->get('config_file', '');
 
-            $configFiles = array_unique(array_filter($configFiles));
-            $config_file = sys_get_temp_dir() . '/ssh_combined_config';
-            $sshConfigFile = 'cat ' . implode(' ', $configFiles) . ' > ' . $config_file . ';';
-            $sshSwitches = "-e \"ssh -F " . $config_file . "\"";
-        } elseif (!is_null($source->getPort())) {
+        //     $configFiles = array_unique(array_filter($configFiles));
+        //     $config_file = sys_get_temp_dir() . '/ssh_combined_config';
+        //     $sshConfigFile = 'cat ' . implode(' ', $configFiles) . ' > ' . $config_file . ' && ';
+        //     $sshSwitches = "-e \"ssh -F " . $config_file . "\"";
+        // } else
+        if (!is_null($source->getPort())) {
             $sshSwitches = "-e \"ssh -p " . $source->getPort() . "\"";
         }
         // $options = $source->connectionOptionsString();
         // warning($options);
 
         $command = "$sshConfigFile $rsync $sshSwitches $switches $excludes $sourceUri $destinationUri";
-        warning($command);
         return $command;
     }
 
@@ -111,16 +110,16 @@ class FileTransfer
                 continue;
             }
 
-            if (hostsAreRemote($source, $destination)) {
-                $rsyncCommand = $this->rsyncCommand($source, $sourceAbsPath, $destination, $destAbsPath, false);
-                // run($rsyncCommand);
-            } else {
-                $rsyncCommand = $this->rsyncCommand($source, $sourceAbsPath, $destination, $destAbsPath, true);
-                // runLocally($rsyncCommand);
-            }
-            warning($rsyncCommand);
+            // if (hostsAreRemote($source, $destination)) {
+            //     $rsyncCommand = $this->rsyncCommand($source, $sourceAbsPath, $destination, $destAbsPath);
+            //     // run($rsyncCommand);
+            // } else {
+            //     $rsyncCommand = $this->rsyncCommand($source, $sourceAbsPath, $destination, $destAbsPath);
+            //     // runLocally($rsyncCommand);
+            // }
+            $rsyncCommand = $this->rsyncCommand($source, $sourceAbsPath, $destination, $destAbsPath);
+            runContextually($destination, $rsyncCommand, ['real_time_output' => true, 'timeout' => 0, 'idle_timeout' => 0]);
         }
-        exit;
     }
 }
 

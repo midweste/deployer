@@ -38,39 +38,44 @@ function whichLocal(string $name): string
  * @param string $name
  * @return void
  */
-function whichContextual(string $name, bool $local = true): string
+function whichContextual(string $name, Host $host): string
 {
-    return ($local) ? whichLocal($name) : which($name);
+    return ($host instanceof Localhost) ? whichLocal($name) : which($name);
 }
 
+
 /**
- * Execute commands based on local or remote host.
+ * Executes given command on contextual host.
  *
  * Examples:
  *
  * ```php
- * $user = runOnHost($host, 'git config user.name');
- * runOnHost($host, "echo $user");
+ * run('echo hello world');
+ * run('cd {{deploy_path}} && git status');
+ * run('password %secret%', secret: getenv('CI_SECRET'));
+ * run('curl medv.io', timeout: 5);
  * ```
  *
- * @param Host $host Host to use to determine run or runLocally
- * @param string $command Command to run on localhost.
+ * ```php
+ * $path = run('readlink {{deploy_path}}/current');
+ * run("echo $path");
+ * ```
+ *
+ * @param string $command Command to run on remote host.
  * @param array|null $options Array of options will override passed named arguments.
- * @param int|null $timeout Sets the process timeout (max. runtime). The timeout in seconds (default: 300 sec, `null` to disable).
+ * @param int|null $timeout Sets the process timeout (max. runtime). The timeout in seconds (default: 300 sec; see {{default_timeout}}, `null` to disable).
  * @param int|null $idle_timeout Sets the process idle timeout (max. time since last output) in seconds.
  * @param string|null $secret Placeholder `%secret%` can be used in command. Placeholder will be replaced with this value and will not appear in any logs.
- * @param array|null $env Array of environment variables: `runLocally('echo $KEY', env: ['key' => 'value']);`
- * @param string|null $shell Shell to run in. Default is `bash -s`.
+ * @param array|null $env Array of environment variables: `run('echo $KEY', env: ['key' => 'value']);`
  *
- * @throws RunException
+ * @throws Exception|RunException|TimeoutException
  */
-function runOnHost(Host $host, string $command, ?array $options = [], ?int $timeout = null, ?int $idle_timeout = null, ?string $secret = null, ?array $env = null, ?string $shell = null): void
+function runContextually(Host $host, string $command, ?array $options = [], ?int $timeout = null, ?int $idle_timeout = null, ?string $secret = null, ?array $env = null, ?string $shell = null): string
 {
     if ($host instanceof Localhost) {
-        runLocally($command, $options, $timeout, $idle_timeout, $secret, $env, $shell);
-    } else {
-        run($command, $options, $timeout, $idle_timeout, $secret, $env, $shell);
+        return runLocally($command, $options, $timeout, $idle_timeout, $secret, $env, $shell);
     }
+    return run($command, $options, $timeout, $idle_timeout, $secret, $env);
 }
 
 function hostFromAlias(string $alias): Host
