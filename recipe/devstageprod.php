@@ -112,26 +112,26 @@ after('files:pull', function () {
     $host = hostLocalhost();
     $wpcli = new WordpressCli($host);
     $command = $wpcli->command('cache flush');
-    runContextually($host, $command);
+    runOnHost($host, $command);
 });
 
 after('db:pull-replace', function () {
     $host = hostLocalhost();
     $wpcli = new WordpressCli($host);
     $command = $wpcli->command('cache flush');
-    runContextually($host, $command);
+    runOnHost($host, $command);
 });
 
 after('staging:files:pull', function () {
     $host = hostFromStage('staging');
     $wpcli = new WordpressCli($host);
     $command = $wpcli->command('cache flush');
-    runContextually($host, $command);
+    runOnHost($host, $command);
 });
 
 after('staging:db:pull-replace', function () {
     $host = hostFromStage('staging');
     $wpcli = new WordpressCli($host);
     $command = $wpcli->command('cache flush');
-    runContextually($host, $command);
+    runOnHost($host, $command);
 });

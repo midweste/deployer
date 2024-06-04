@@ -27,7 +27,7 @@ namespace Deployer;
 use Deployer\Host\Host;
 use Deployer\Host\Localhost;
 
-set('filetransfer_rsync_switches', '-rlztv --delete'); // '-rlztv --progress --size-only --ipv4 --delete --ignore-missing-args'
+set('filetransfer_rsync_switches', '-rlztv --delete --dry-run'); // '-rlztv --progress --size-only --ipv4 --delete --ignore-missing-args'
 set('filetransfer_rsync_excludes', []);
 
 class FileTransfer
@@ -110,15 +110,8 @@ class FileTransfer
                 continue;
             }
 
-            // if (hostsAreRemote($source, $destination)) {
-            //     $rsyncCommand = $this->rsyncCommand($source, $sourceAbsPath, $destination, $destAbsPath);
-            //     // run($rsyncCommand);
-            // } else {
-            //     $rsyncCommand = $this->rsyncCommand($source, $sourceAbsPath, $destination, $destAbsPath);
-            //     // runLocally($rsyncCommand);
-            // }
             $rsyncCommand = $this->rsyncCommand($source, $sourceAbsPath, $destination, $destAbsPath);
-            runContextually($destination, $rsyncCommand, ['real_time_output' => true, 'timeout' => 0, 'idle_timeout' => 0]);
+            runOnHost($destination, $rsyncCommand, ['real_time_output' => true, 'timeout' => 0, 'idle_timeout' => 0]);
         }
     }
 }

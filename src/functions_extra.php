@@ -7,6 +7,9 @@ namespace Deployer;
 use Deployer\Host\Host;
 use Deployer\Host\HostCollection;
 use Deployer\Host\Localhost;
+use function Deployer\Support\array_merge_alternate;
+use function Deployer\Support\env_stringify;
+use Deployer\Exception\RunException;
 
 /* ----------------- Helper Functions ----------------- */
 
@@ -43,9 +46,8 @@ function whichContextual(string $name, Host $host): string
     return ($host instanceof Localhost) ? whichLocal($name) : which($name);
 }
 
-
 /**
- * Executes given command on contextual host.
+ * Executes given command on a provided local or remote host.
  *
  * Examples:
  *
@@ -67,15 +69,74 @@ function whichContextual(string $name, Host $host): string
  * @param int|null $idle_timeout Sets the process idle timeout (max. time since last output) in seconds.
  * @param string|null $secret Placeholder `%secret%` can be used in command. Placeholder will be replaced with this value and will not appear in any logs.
  * @param array|null $env Array of environment variables: `run('echo $KEY', env: ['key' => 'value']);`
+ * @param bool|null $real_time_output Print command output in real-time.
+ * @param bool|null $no_throw Don't throw an exception of non-zero exit code.
  *
  * @throws Exception|RunException|TimeoutException
  */
-function runContextually(Host $host, string $command, ?array $options = [], ?int $timeout = null, ?int $idle_timeout = null, ?string $secret = null, ?array $env = null, ?string $shell = null): string
+function runOnHost(Host $host, string $command, ?array $options = [], ?int $timeout = null, ?int $idle_timeout = null, ?string $secret = null, ?array $env = null, ?bool $real_time_output = false, ?bool $no_throw = false): string
 {
-    if ($host instanceof Localhost) {
-        return runLocally($command, $options, $timeout, $idle_timeout, $secret, $env, $shell);
+    $namedArguments = [];
+    foreach (['timeout', 'idle_timeout', 'secret', 'env', 'real_time_output', 'no_throw'] as $arg) {
+        if ($$arg !== null) {
+            $namedArguments[$arg] = $$arg;
+        }
     }
-    return run($command, $options, $timeout, $idle_timeout, $secret, $env);
+    $options = array_merge($namedArguments, $options);
+    $run = function ($command, $options = []) use ($host): string {
+        // $host = currentHost();
+
+        $command = parse($command);
+        $workingPath = get('working_path', '');
+
+        if (!empty($workingPath)) {
+            $command = "cd $workingPath && ($command)";
+        }
+
+        $env = array_merge_alternate(get('env', []), $options['env'] ?? []);
+        if (!empty($env)) {
+            $env = env_stringify($env);
+            $command = "export $env; $command";
+        }
+
+        $dotenv = get('dotenv', false);
+        if (!empty($dotenv)) {
+            $command = ". $dotenv; $command";
+        }
+
+        $output = $host->getRemoteUser() . '@' . $host->getHostname() . '$ ' . $command;
+        writeln($output);
+        if ($host instanceof Localhost) {
+            // $process = Deployer::get()->processRunner;
+            // $output = $process->run($host, $command, $options);
+        } else {
+            // $client = Deployer::get()->sshClient;
+            // $output = $client->run($host, $command, $options);
+        }
+
+        return rtrim($output);
+    };
+
+    if (preg_match('/^sudo\b/', $command)) {
+        try {
+            return $run($command, $options);
+        } catch (RunException $exception) {
+            $askpass = get('sudo_askpass', '/tmp/dep_sudo_pass');
+            $password = get('sudo_pass', false);
+            if ($password === false) {
+                writeln("<fg=green;options=bold>run</> $command");
+                $password = askHiddenResponse(" [sudo] password for {{remote_user}}: ");
+            }
+            $run("echo -e '#!/bin/sh\necho \"\$PASSWORD\"' > $askpass");
+            $run("chmod a+x $askpass");
+            $command = preg_replace('/^sudo\b/', 'sudo -A', $command);
+            $output = $run(" SUDO_ASKPASS=$askpass PASSWORD=%sudo_pass% $command", array_merge($options, ['sudo_pass' => escapeshellarg($password)]));
+            $run("rm $askpass");
+            return $output;
+        }
+    } else {
+        return $run($command, $options);
+    }
 }
 
 function hostFromAlias(string $alias): Host
