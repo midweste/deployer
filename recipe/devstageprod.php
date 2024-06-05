@@ -14,7 +14,7 @@ require_once __DIR__ . '/../contrib/git.php';
 add('recipes', ['devstageprod']);
 
 /**
- * Siteground configuration
+ * Wordpress configuration
  */
 set('shared_dirs', ['wp-content/uploads']);
 set('writable_dirs', ['wp-content/uploads']);

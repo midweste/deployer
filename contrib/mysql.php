@@ -136,74 +136,88 @@ class Mysql
         return false;
     }
 
-    protected function hostPortUserPassword(object $creds): string
+    protected function hostPortUserPassword(object $H): string
     {
-        $connection = "--host=\"$creds->host\" --port=\"$creds->port\" --user=\"$creds->user\" --password=\"$creds->pass\"";
-        return $connection;
+        $hostPortUserPassword = sprintf('--host="%s" --port="%s" --user="%s" --password="%s"', $H->host, $H->port, $H->user, $H->pass);
+        return $hostPortUserPassword;
+    }
+
+    protected function sshTunnel(Host $host, Host $runOnHost, string $command): string
+    {
+        if (!$host->get('mysql_ssh', false)) {
+            return $command;
+        }
+        $command = str_replace("'", "\'", $command);
+        return sprintf('%s %s \'%s\'', whichContextual('ssh', $runOnHost), $host->connectionString(), $command);
+    }
+
+    protected function sshWhich(string $name, Host $host): string
+    {
+        return whichContextual($name, $host->get('mysql_ssh', false) ? $host : hostLocalhost());
+    }
+
+    /* ----------------- Command Creation ----------------- */
+
+    protected function mysqlImportCommand(Host $destination): string
+    {
+        $mysql = whichContextual('mysql', $destination);
+        $D = $this->hostCredentials($destination);
+        $destHostPortUserPassword = $this->hostPortUserPassword($D);
+
+        $importCommand = sprintf('%s %s %s', $mysql, $destHostPortUserPassword, $D->name);
+        $importCommandPrefixed = $this->sshTunnel($destination, hostLocalhost(), $importCommand);
+        return $importCommandPrefixed;
+    }
+
+    protected function mysqlDumpCommand(Host $source): string
+    {
+        $mysqldump = $this->sshWhich('mysqldump', $source);
+        $dumpSwitches = get('mysql_dump_switches');
+        $H = $this->hostCredentials($source);
+        $hostPortUserPassword = $this->hostPortUserPassword($H);
+
+        $dumpCommand = sprintf('%s %s %s %s', $mysqldump, $dumpSwitches, $hostPortUserPassword, $H->name);
+        $dumpCommand = $this->sshTunnel($source, hostLocalhost(), $dumpCommand);
+        return $dumpCommand;
     }
 
     public function findReplaceCommand(Host $source, Host $destination): string
     {
-        $php = whichContextual('php', $destination);
-
-        $S = $this->hostCredentials($source);
-        $D = $this->hostCredentials($destination);
-        $destHostPortUserPassword = "--host=\"$D->host\" --port=\"$D->port\" --user=\"$D->user\" --pass=\"$D->pass\"";
+        $php = $this->sshWhich('php', $destination);
+        $script = __DIR__ . "/../../../interconnectit/search-replace-db/srdb.cli.php";
 
         $tableExclusions = implode(',', get('mysql_find_replace_table_exclusions', ''));
         if (!empty($tableExclusions)) {
-            $tableExclusions = "--exclude-tables=\"$tableExclusions\"";
+            $tableExclusions = sprintf('--exclude-tables="%s"', $tableExclusions);
         }
 
-        $script = __DIR__ . "/../../../interconnectit/search-replace-db/srdb.cli.php";
-        $command = "$php $script $tableExclusions $destHostPortUserPassword --name=\"$D->name\" --search=\"$S->domain\" --replace=\"$D->domain\"";
-        return $command;
-    }
+        $S = $this->hostCredentials($source);
+        $D = $this->hostCredentials($destination);
 
-    protected function sshTunnel(Host $source, Host $destination, string $command): string
-    {
-        if (!$source->get('mysql_ssh', false)) {
-            return $command;
-        }
-        $command = str_replace("'", "\'", $command);
-        return sprintf('%s %s \'%s\'', whichContextual('ssh', $destination), $source->connectionString(), $command);
+        $sprintTemplate = '%s %s %s --host="%s" --port="%s" --user="%s" --pass="%s" --name="%s" --search="%s" --replace="%s"';
+        $replaceCommand = sprintf($sprintTemplate, $php, $script, $tableExclusions, $D->host, $D->port, $D->user, $D->pass, $D->name, $S->domain, $D->domain);
+        $replaceCommand = $this->sshTunnel($destination, hostLocalhost(), $replaceCommand);
+
+        return $replaceCommand;
     }
 
     public function pullCommand(Host $source, Host $destination): string
     {
-        $mysqldump = whichContextual('mysqldump', $destination);
-        $mysql = whichContextual('mysql', $destination);
-
-        $S = $this->hostCredentials($source);
-        $sourceHostPortUserPassword = $this->hostPortUserPassword($S);
-
-        $D = $this->hostCredentials($destination);
-        $destHostPortUserPassword = $this->hostPortUserPassword($D);
-
-        $dumpSwitches = get('mysql_dump_switches');
-        $dumpCommand = "$mysqldump $dumpSwitches $sourceHostPortUserPassword $S->name";
-        $dumpCommandPrefixed = $this->sshTunnel($source, $destination, $dumpCommand);
-
-        $importCommand = "$mysql $destHostPortUserPassword $D->name";
-
-        $pullCommand = sprintf('%s | %s', $dumpCommandPrefixed, $importCommand);
-        return $pullCommand;
+        return sprintf('%s | %s', $this->mysqlDumpCommand($source), $this->mysqlImportCommand($destination));
     }
 
     public function backupCommand(Host $source): string
     {
-        $mysqldump = $this->whichLocal('mysqldump');
-        $gzip = $this->whichLocal('gzip');
-
         $H = $this->hostCredentials($source);
-        $hostPortUserPassword = $this->hostPortUserPassword($H);
+        $dumpCommand = $this->mysqlDumpCommand($source);
 
+        $gzip = whichLocal('gzip');
         $dumpName = sprintf('db-%s-%s-%s.sql', $source->getAlias(), $H->name, date('YmdHis'));
-        $dumpSwitches = get('mysql_dump_switches');
-        $command = "$mysqldump $dumpSwitches $hostPortUserPassword $H->name > \"$dumpName\" && $gzip \"$dumpName\"";
-        return $command;
+        $backupCommand = sprintf('%s > "%s" && %s "%s"', $dumpCommand, $dumpName, $gzip, $dumpName);
+        return $backupCommand;
     }
 
+    /* ----------------- Mysql Methods ----------------- */
 
     /**
      * Backup a remote database to the local filesystem
@@ -228,26 +242,27 @@ class Mysql
             throw error("Command cannot be run on production");
         }
 
-        $mysql = whichContextual('mysql', $host);
+        $localHost = hostLocalhost();
+        $mysql = whichContextual('mysql', $localHost);
 
         $H = $this->hostCredentials($host);
-        $hostPortUserPassword = $this->hostPortUserPassword($H);
+        $connection = sprintf('%s %s %s', $mysql, $this->hostPortUserPassword($H), $H->name);
 
-        $connection = "$mysql $hostPortUserPassword $H->name";
-
-        $tablesCommand = $connection . " -e 'SHOW TABLES' ";
-
-        $tables = runOnHost($host, $tablesCommand);
+        $tablesCommand = sprintf('%s -e "SHOW TABLES"', $connection);
+        $tablesCommandPrefixed = $this->sshTunnel($host, hostLocalhost(), $tablesCommand);
+        $tables = runOnHost($localHost, $tablesCommandPrefixed);
 
         $tableArray = explode(PHP_EOL, $tables);
         unset($tableArray[0]); // removes 'Tables in dbname' entry
         if (empty($tableArray)) {
-            info("No tables found in $H->name");
+            warning("No tables found in {$H->name}");
             return;
         }
 
         foreach ($tableArray as $table) {
-            runOnHost($host, $connection . " -e 'DROP TABLE `$table`'");
+            $dropCommand = sprintf('%s -e "DROP TABLE `%s`"', $connection, $table);
+            $dropCommandPrefixed = $this->sshTunnel($host, hostLocalhost(), $dropCommand);
+            runOnHost($localHost, $dropCommandPrefixed);
             info("Dropped table $table");
         }
     }
@@ -271,7 +286,7 @@ class Mysql
         }
         $this->clear($destination);
         $pullCommand = $this->pullCommand($source, $destination);
-        runOnHost($destination, $pullCommand, ['real_time_output' => true, 'timeout' => 0, 'idle_timeout' => 0]);
+        runOnHost(hostLocalhost(), $pullCommand, ['real_time_output' => true, 'timeout' => 0, 'idle_timeout' => 0]);
     }
 
     /**

@@ -17,7 +17,7 @@ use Deployer\Exception\RunException;
  * Which ran locally
  *
  * @param string $name
- * @return void
+ * @return string
  */
 function whichLocal(string $name): string
 {
@@ -39,7 +39,7 @@ function whichLocal(string $name): string
  * Copy of which but ran contextually (local or remote)
  *
  * @param string $name
- * @return void
+ * @return string
  */
 function whichContextual(string $name, Host $host): string
 {
@@ -104,9 +104,10 @@ function runOnHost(Host $host, string $command, ?array $options = [], ?int $time
             $command = ". $dotenv; $command";
         }
 
-        $output = $host->getRemoteUser() . '@' . $host->getHostname() . '$ ' . $command;
-        writeln($output);
-        if ($host instanceof Localhost) {
+        if (get('debug', false)) {
+            $output = $host->getRemoteUser() . '@' . $host->getHostname() . '$ ' . $command;
+            writeln($output);
+        } elseif ($host instanceof Localhost) {
             // $process = Deployer::get()->processRunner;
             // $output = $process->run($host, $command, $options);
         } else {
