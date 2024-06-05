@@ -97,7 +97,9 @@ task('staging:files:pull', function () {
 
 task('staging:db:pull-replace', function () {
     $mysql = new Mysql();
-    $mysql->pullReplace(currentHost(), hostFromStage('staging'));
+    $mysql->pull(currentHost(), hostFromStage('staging'));
+    $mysql->findReplace(currentHost(), hostFromStage('staging'));
+    // $mysql->pullReplace(currentHost(), hostFromStage('staging'));
 })->desc('Truncate staging db, pull db from a production, find/replace production with staging domain');
 
 task('staging:pull-all', [
