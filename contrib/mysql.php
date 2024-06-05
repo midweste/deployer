@@ -13,12 +13,13 @@ require 'contrib/mysql.php';
 - `mysql_find_replace_table_exclusions', Array of tables to skip when doing a find replace
 
 ## Host Configuration
-- `mysql_domain`,
-- `mysql_host`,
-- `mysql_name`,
-- `mysql_pass`,
-- `mysql_port`,
-- `mysql_user`,
+- `mysql_domain`, The domain name of the website, used for find replace
+- `mysql_host`, The mysql host
+- `mysql_name`, The mysql database name
+- `mysql_pass`, The mysql password
+- `mysql_port`, The mysql port
+- `mysql_user`, The mysql user
+- `mysql_ssh`, Set to true if the host requires an ssh tunnel to connect to the mysql server
 - `production`, Set production flag as true on production host to prevent any potentially destructive actions from running on this host
 
 ## Usage
@@ -159,6 +160,15 @@ class Mysql
         return $command;
     }
 
+    protected function sshTunnel(Host $source, Host $destination, string $command): string
+    {
+        if (!$source->get('mysql_ssh', false)) {
+            return $command;
+        }
+        $command = str_replace("'", "\'", $command);
+        return sprintf('%s %s \'%s\'', whichContextual('ssh', $destination), $source->connectionString(), $command);
+    }
+
     public function pullCommand(Host $source, Host $destination): string
     {
         $mysqldump = whichContextual('mysqldump', $destination);
@@ -171,7 +181,12 @@ class Mysql
         $destHostPortUserPassword = $this->hostPortUserPassword($D);
 
         $dumpSwitches = get('mysql_dump_switches');
-        $pullCommand = "$mysqldump $dumpSwitches $sourceHostPortUserPassword $S->name | $mysql $destHostPortUserPassword $D->name";
+        $dumpCommand = "$mysqldump $dumpSwitches $sourceHostPortUserPassword $S->name";
+        $dumpCommandPrefixed = $this->sshTunnel($source, $destination, $dumpCommand);
+
+        $importCommand = "$mysql $destHostPortUserPassword $D->name";
+
+        $pullCommand = sprintf('%s | %s', $dumpCommandPrefixed, $importCommand);
         return $pullCommand;
     }
 
@@ -245,6 +260,9 @@ class Mysql
      */
     public function pull(Host $source, Host $destination): void
     {
+        if (hostIsLocalhost($source)) {
+            throw error("Source host cannot be localhost when pulling databases");
+        }
         if (hostsAreSame($source, $destination)) {
             throw error("Hosts source and destination cannot be the same host when pulling databases");
         }
