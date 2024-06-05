@@ -105,7 +105,7 @@ function runOnHost(Host $host, string $command, ?array $options = [], ?int $time
         }
 
         $output = $host->getRemoteUser() . '@' . $host->getHostname() . '$ ' . $command;
-        if (get('verbose', false)) {
+        if (get('verbose', false) || get('debug', false)) {
             info($output);
         }
         if (get('debug', false) === false) {

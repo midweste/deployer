@@ -117,6 +117,13 @@ after('files:pull', function () {
     runOnHost($host, $command);
 });
 
+after('db:pull', function () {
+    $host = hostLocalhost();
+    $wpcli = new WordpressCli($host);
+    $command = $wpcli->command('cache flush');
+    runOnHost($host, $command);
+});
+
 after('db:pull-replace', function () {
     $host = hostLocalhost();
     $wpcli = new WordpressCli($host);

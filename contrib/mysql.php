@@ -36,7 +36,8 @@ namespace Deployer;
 
 use Deployer\Host\Host;
 
-set('mysql_dump_switches', '--max_allowed_packet=128M --single-transaction --quick --extended-insert --allow-keywords --events --routines --compress --extended-insert --create-options --add-drop-table --add-locks --no-tablespaces');
+//set('mysql_dump_switches', '--max_allowed_packet=128M --single-transaction --quick --extended-insert --allow-keywords --events --routines --compress --extended-insert --create-options --add-drop-table --add-locks --no-tablespaces');
+set('mysql_dump_switches', '--max_allowed_packet=512MB --net-buffer-length=2MB --single-transaction --extended-insert --allow-keywords --events --routines --compress --extended-insert --create-options --add-drop-table --add-locks --no-tablespaces');
 set('mysql_find_replace_table_exclusions', []);
 
 class Mysql
@@ -194,7 +195,7 @@ class Mysql
         $S = $this->hostCredentials($source);
         $D = $this->hostCredentials($destination);
 
-        $sprintTemplate = '%s %s %s --pagesize="5000" --debug="true" --host="%s" --port="%s" --user="%s" --pass="%s" --name="%s" --search="%s" --replace="%s"';
+        $sprintTemplate = '%s %s %s --pagesize="5000" --host="%s" --port="%s" --user="%s" --pass="%s" --name="%s" --search="%s" --replace="%s"';
         $replaceCommand = sprintf($sprintTemplate, $php, $script, $tableExclusions, $D->host, $D->port, $D->user, $D->pass, $D->name, $S->domain, $D->domain);
         $replaceCommand = $this->sshTunnel($destination, hostLocalhost(), $replaceCommand);
 
@@ -248,7 +249,7 @@ class Mysql
         $H = $this->hostCredentials($host);
         $connection = sprintf('%s %s %s', $mysql, $this->hostPortUserPassword($H), $H->name);
 
-        $tablesCommand = sprintf("%s -e \'SHOW TABLES\'", $connection);
+        $tablesCommand = sprintf('%s -e "SHOW TABLES;"', $connection);
         $tablesCommandPrefixed = $this->sshTunnel($host, hostLocalhost(), $tablesCommand);
         $tables = runOnHost($localHost, $tablesCommandPrefixed);
 
@@ -259,12 +260,14 @@ class Mysql
             return;
         }
 
-        foreach ($tableArray as $table) {
-            $dropCommand = sprintf("%s -e \'DROP TABLE `%s`\'", $connection, $table);
-            $dropCommandPrefixed = $this->sshTunnel($host, hostLocalhost(), $dropCommand);
-            runOnHost($localHost, $dropCommandPrefixed);
-            info("Dropped table $table");
-        }
+        // foreach ($tableArray as $table) {
+
+        // }
+        $dropTables = implode(',', $tableArray);
+        $dropCommand = sprintf('%s -e "DROP TABLE IF EXISTS %s;"', $connection, $dropTables);
+        $dropCommandPrefixed = $this->sshTunnel($host, hostLocalhost(), $dropCommand);
+        runOnHost($localHost, $dropCommandPrefixed);
+        // info("Dropped tables $dropTables");
     }
 
     /**
