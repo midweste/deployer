@@ -187,6 +187,11 @@ function hostHasLabel(Host $host, string $label): bool
     return (isset($labels[$label])) ? true : false;
 }
 
+function hostIsLocalhost(Host $host): bool
+{
+    return ($host instanceof Localhost) ? true : false;
+}
+
 function hosts(): HostCollection
 {
     return Deployer::get()->hosts;
