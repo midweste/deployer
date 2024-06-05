@@ -194,7 +194,7 @@ class Mysql
         $S = $this->hostCredentials($source);
         $D = $this->hostCredentials($destination);
 
-        $sprintTemplate = '%s %s %s --host="%s" --port="%s" --user="%s" --pass="%s" --name="%s" --search="%s" --replace="%s"';
+        $sprintTemplate = '%s %s %s --pagesize="5000" --debug="true" --host="%s" --port="%s" --user="%s" --pass="%s" --name="%s" --search="%s" --replace="%s"';
         $replaceCommand = sprintf($sprintTemplate, $php, $script, $tableExclusions, $D->host, $D->port, $D->user, $D->pass, $D->name, $S->domain, $D->domain);
         $replaceCommand = $this->sshTunnel($destination, hostLocalhost(), $replaceCommand);
 
@@ -248,7 +248,7 @@ class Mysql
         $H = $this->hostCredentials($host);
         $connection = sprintf('%s %s %s', $mysql, $this->hostPortUserPassword($H), $H->name);
 
-        $tablesCommand = sprintf('%s -e "SHOW TABLES"', $connection);
+        $tablesCommand = sprintf("%s -e \'SHOW TABLES\'", $connection);
         $tablesCommandPrefixed = $this->sshTunnel($host, hostLocalhost(), $tablesCommand);
         $tables = runOnHost($localHost, $tablesCommandPrefixed);
 
@@ -260,7 +260,7 @@ class Mysql
         }
 
         foreach ($tableArray as $table) {
-            $dropCommand = sprintf('%s -e "DROP TABLE `%s`"', $connection, $table);
+            $dropCommand = sprintf("%s -e \'DROP TABLE `%s`\'", $connection, $table);
             $dropCommandPrefixed = $this->sshTunnel($host, hostLocalhost(), $dropCommand);
             runOnHost($localHost, $dropCommandPrefixed);
             info("Dropped table $table");

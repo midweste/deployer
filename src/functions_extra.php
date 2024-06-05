@@ -104,15 +104,18 @@ function runOnHost(Host $host, string $command, ?array $options = [], ?int $time
             $command = ". $dotenv; $command";
         }
 
-        if (get('debug', false)) {
-            $output = $host->getRemoteUser() . '@' . $host->getHostname() . '$ ' . $command;
-            writeln($output);
-        } elseif ($host instanceof Localhost) {
-            // $process = Deployer::get()->processRunner;
-            // $output = $process->run($host, $command, $options);
-        } else {
-            // $client = Deployer::get()->sshClient;
-            // $output = $client->run($host, $command, $options);
+        $output = $host->getRemoteUser() . '@' . $host->getHostname() . '$ ' . $command;
+        if (get('verbose', false)) {
+            info($output);
+        }
+        if (get('debug', false) === false) {
+            if ($host instanceof Localhost) {
+                $process = Deployer::get()->processRunner;
+                $output = $process->run($host, $command, $options);
+            } else {
+                $client = Deployer::get()->sshClient;
+                $output = $client->run($host, $command, $options);
+            }
         }
 
         return rtrim($output);
