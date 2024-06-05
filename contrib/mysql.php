@@ -248,6 +248,9 @@ class Mysql
      */
     public function pull(Host $source, Host $destination): void
     {
+        if (hostsAreSame($source, $destination)) {
+            throw error("Hosts source and destination cannot be the same host when pulling files");
+        }
         $this->clear($destination);
         $pullCommand = $this->transferCommand($source, $destination);
         runLocally($pullCommand, ['real_time_output' => true, 'timeout' => 0, 'idle_timeout' => 0]);
@@ -262,6 +265,9 @@ class Mysql
      */
     public function findReplace(Host $source, Host $destination): void
     {
+        if (hostsAreSame($source, $destination)) {
+            throw error("Hosts source and destination cannot be the same host when find replacing");
+        }
         $replaceCommand = $this->findReplaceCommand($source, $destination);
         runLocally($replaceCommand, ['real_time_output' => true, 'timeout' => 0, 'idle_timeout' => 0]);
     }
@@ -275,6 +281,9 @@ class Mysql
      */
     public function pullReplace(Host $source, Host $destination): void
     {
+        if (hostsAreSame($source, $destination)) {
+            throw error("Hosts source and destination cannot be the same host when pull replacing");
+        }
         $this->pull($source, $destination);
         $this->findReplace($source, $destination);
     }
