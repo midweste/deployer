@@ -195,7 +195,7 @@ class Mysql
         $S = $this->hostCredentials($source);
         $D = $this->hostCredentials($destination);
 
-        $sprintTemplate = '%s %s %s --pagesize="5000" --host="%s" --port="%s" --user="%s" --pass="%s" --name="%s" --search="%s" --replace="%s"';
+        $sprintTemplate = '%s %s %s --host="%s" --page-size=50000 --port="%s" --user="%s" --pass="%s" --name="%s" --search="%s" --replace="%s"';
         $replaceCommand = sprintf($sprintTemplate, $php, $script, $tableExclusions, $D->host, $D->port, $D->user, $D->pass, $D->name, $S->domain, $D->domain);
         $replaceCommand = $this->sshTunnel($destination, hostLocalhost(), $replaceCommand);
 
@@ -289,7 +289,7 @@ class Mysql
         }
         $this->clear($destination);
         $pullCommand = $this->pullCommand($source, $destination);
-        runOnHost(hostLocalhost(), $pullCommand, ['real_time_output' => true, 'timeout' => 0, 'idle_timeout' => 0]);
+        runOnHost(hostLocalhost(), $pullCommand, ['real_time_output' => false, 'timeout' => 0, 'idle_timeout' => 0]);
     }
 
     /**
