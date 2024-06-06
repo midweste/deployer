@@ -95,11 +95,15 @@ task('staging:files:pull', function () {
     $files->pullSharedWritable(currentHost(), hostFromStage('staging'));
 })->desc('Remove writable staging directories, copy writable directories from production to staging');
 
+task('staging:db:replace', function () {
+    $mysql = new Mysql();
+    $mysql->findReplace(currentHost(), hostFromStage('staging'));
+})->desc('Truncate staging db, pull db from a production, find/replace production with staging domain');
+
 task('staging:db:pull-replace', function () {
     $mysql = new Mysql();
     $mysql->pull(currentHost(), hostFromStage('staging'));
     $mysql->findReplace(currentHost(), hostFromStage('staging'));
-    // $mysql->pullReplace(currentHost(), hostFromStage('staging'));
 })->desc('Truncate staging db, pull db from a production, find/replace production with staging domain');
 
 task('staging:pull-all', [

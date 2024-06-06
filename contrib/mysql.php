@@ -185,7 +185,8 @@ class Mysql
     public function findReplaceCommand(Host $source, Host $destination): string
     {
         $php = $this->sshWhich('php', $destination);
-        $script = __DIR__ . "/../../../interconnectit/search-replace-db/srdb.cli.php";
+        $scriptDir = hostIsLocalhost($destination) ? $destination->getDeployPath() : hostCurrentDir($destination);
+        $script = $scriptDir . "/vendor/interconnectit/search-replace-db/srdb.cli.php";
 
         $tableExclusions = implode(',', get('mysql_find_replace_table_exclusions', ''));
         if (!empty($tableExclusions)) {
@@ -308,7 +309,7 @@ class Mysql
             throw error("Command cannot be run on production");
         }
         $replaceCommand = $this->findReplaceCommand($source, $destination);
-        runOnHost($destination, $replaceCommand, ['real_time_output' => true, 'timeout' => 0, 'idle_timeout' => 0]);
+        runOnHost(hostLocalhost(), $replaceCommand, ['real_time_output' => true, 'timeout' => 0, 'idle_timeout' => 0]);
     }
 
     // /**
