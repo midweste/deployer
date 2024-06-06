@@ -53,7 +53,12 @@ function sshPrefix(Host $host, Host $runOnHost, string $command): string
         return $command;
     }
     $command = str_replace("'", "\'", $command);
-    return sprintf('%s %s \'%s\'', whichContextual('ssh', $runOnHost), $host->connectionString(), $command);
+    return sprintf("%s %s '%s'", whichContextual('ssh', $runOnHost), $host->connectionString(), $command);
+}
+
+function sshWhich(string $name, Host $host): string
+{
+    return whichContextual($name, $host->get('mysql_ssh', false) ? $host : hostLocalhost());
 }
 
 /**

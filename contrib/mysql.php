@@ -104,87 +104,40 @@ class Mysql
         return $credentials;
     }
 
-    protected function whichLocal(string $name): string
-    {
-        $nameEscaped = escapeshellarg($name);
-
-        // Try `command`, should cover all Bourne-like shells
-        // Try `which`, should cover most other cases
-        // Fallback to `type` command, if the rest fails
-        $path = runLocally("command -v $nameEscaped || which $nameEscaped || type -p $nameEscaped");
-        if (empty($path)) {
-            throw error("Can't locate [$nameEscaped] - neither of [command|which|type] commands are available");
-        }
-
-        // Deal with issue when `type -p` outputs something like `type -ap` in some implementations
-        return trim(str_replace("$name is", "", $path));
-    }
-
-    public function hostIsProduction(Host $host): bool
-    {
-        if ($host->getAlias() == 'production') {
-            return true;
-        }
-
-        if ($host->get('production', false) === true) {
-            return true;
-        }
-
-        if ($host->get('branch', null) == 'production') {
-            return true;
-        }
-
-        return false;
-    }
-
     protected function hostPortUserPassword(object $H): string
     {
         $hostPortUserPassword = sprintf('--host="%s" --port="%s" --user="%s" --password="%s"', $H->host, $H->port, $H->user, $H->pass);
         return $hostPortUserPassword;
     }
 
-    protected function sshTunnel(Host $host, Host $runOnHost, string $command): string
-    {
-        if (!$host->get('mysql_ssh', false)) {
-            return $command;
-        }
-        $command = str_replace("'", "\'", $command);
-        return sprintf('%s %s \'%s\'', whichContextual('ssh', $runOnHost), $host->connectionString(), $command);
-    }
-
-    protected function sshWhich(string $name, Host $host): string
-    {
-        return whichContextual($name, $host->get('mysql_ssh', false) ? $host : hostLocalhost());
-    }
-
     /* ----------------- Command Creation ----------------- */
 
     protected function mysqlImportCommand(Host $destination): string
     {
-        $mysql = whichContextual('mysql', $destination);
+        $mysql = sshWhich('mysql', $destination);
         $D = $this->hostCredentials($destination);
         $destHostPortUserPassword = $this->hostPortUserPassword($D);
 
         $importCommand = sprintf('%s %s %s', $mysql, $destHostPortUserPassword, $D->name);
-        $importCommandPrefixed = $this->sshTunnel($destination, hostLocalhost(), $importCommand);
+        $importCommandPrefixed = sshPrefix($destination, hostLocalhost(), $importCommand);
         return $importCommandPrefixed;
     }
 
     protected function mysqlDumpCommand(Host $source): string
     {
-        $mysqldump = $this->sshWhich('mysqldump', $source);
+        $mysqldump = sshWhich('mysqldump', $source);
         $dumpSwitches = get('mysql_dump_switches');
         $H = $this->hostCredentials($source);
         $hostPortUserPassword = $this->hostPortUserPassword($H);
 
         $dumpCommand = sprintf('%s %s %s %s', $mysqldump, $dumpSwitches, $hostPortUserPassword, $H->name);
-        $dumpCommand = $this->sshTunnel($source, hostLocalhost(), $dumpCommand);
+        $dumpCommand = sshPrefix($source, hostLocalhost(), $dumpCommand);
         return $dumpCommand;
     }
 
     public function findReplaceCommand(Host $source, Host $destination): string
     {
-        $php = $this->sshWhich('php', $destination);
+        $php = sshWhich('php', $destination);
         $scriptDir = hostIsLocalhost($destination) ? $destination->getDeployPath() : hostCurrentDir($destination);
         $script = $scriptDir . "/vendor/interconnectit/search-replace-db/srdb.cli.php";
 
@@ -198,7 +151,7 @@ class Mysql
 
         $sprintTemplate = '%s %s %s --host="%s" --page-size=50000 --port="%s" --user="%s" --pass="%s" --name="%s" --search="%s" --replace="%s"';
         $replaceCommand = sprintf($sprintTemplate, $php, $script, $tableExclusions, $D->host, $D->port, $D->user, $D->pass, $D->name, $S->domain, $D->domain);
-        $replaceCommand = $this->sshTunnel($destination, hostLocalhost(), $replaceCommand);
+        $replaceCommand = sshPrefix($destination, hostLocalhost(), $replaceCommand);
 
         return $replaceCommand;
     }
@@ -240,19 +193,18 @@ class Mysql
      */
     public function clear(Host $host): void
     {
-        if ($this->hostIsProduction($host)) {
+        if (hostIsProduction($host)) {
             throw error("Command cannot be run on production");
         }
 
-        $localHost = hostLocalhost();
-        $mysql = whichContextual('mysql', $localHost);
+        $mysql = sshWhich('mysql', $host);
 
         $H = $this->hostCredentials($host);
         $connection = sprintf('%s %s %s', $mysql, $this->hostPortUserPassword($H), $H->name);
 
         $tablesCommand = sprintf('%s -e "SHOW TABLES;"', $connection);
-        $tablesCommandPrefixed = $this->sshTunnel($host, hostLocalhost(), $tablesCommand);
-        $tables = runOnHost($localHost, $tablesCommandPrefixed);
+        $tablesCommandPrefixed = sshPrefix($host, hostLocalhost(), $tablesCommand);
+        $tables = runOnHost(hostLocalhost(), $tablesCommandPrefixed);
 
         $tableArray = explode(PHP_EOL, $tables);
         unset($tableArray[0]); // removes 'Tables in dbname' entry
@@ -261,13 +213,10 @@ class Mysql
             return;
         }
 
-        // foreach ($tableArray as $table) {
-
-        // }
         $dropTables = implode(',', $tableArray);
         $dropCommand = sprintf('%s -e "DROP TABLE IF EXISTS %s;"', $connection, $dropTables);
-        $dropCommandPrefixed = $this->sshTunnel($host, hostLocalhost(), $dropCommand);
-        runOnHost($localHost, $dropCommandPrefixed);
+        $dropCommandPrefixed = sshPrefix($host, hostLocalhost(), $dropCommand);
+        runOnHost(hostLocalhost(), $dropCommandPrefixed);
         // info("Dropped tables $dropTables");
     }
 
@@ -285,7 +234,7 @@ class Mysql
         if (hostsAreSame($source, $destination)) {
             throw error("Hosts source and destination cannot be the same host when pulling databases");
         }
-        if ($this->hostIsProduction($destination)) {
+        if (hostIsProduction($destination)) {
             throw error("Command cannot be run on production");
         }
         $this->clear($destination);
@@ -305,31 +254,12 @@ class Mysql
         if (hostsAreSame($source, $destination)) {
             throw error("Hosts source and destination cannot be the same host when find replacing");
         }
-        if ($this->hostIsProduction($destination)) {
+        if (hostIsProduction($destination)) {
             throw error("Command cannot be run on production");
         }
         $replaceCommand = $this->findReplaceCommand($source, $destination);
         runOnHost(hostLocalhost(), $replaceCommand, ['real_time_output' => true, 'timeout' => 0, 'idle_timeout' => 0]);
     }
-
-    // /**
-    //  * Pull a remote db and run domain name replacements
-    //  *
-    //  * @param Host $source
-    //  * @param Host $destination
-    //  * @return void
-    //  */
-    // public function pullReplace(Host $source, Host $destination): void
-    // {
-    //     if (hostsAreSame($source, $destination)) {
-    //         throw error("Hosts source and destination cannot be the same host when pull replacing");
-    //     }
-    //     if ($this->hostIsProduction($destination)) {
-    //         throw error("Command cannot be run on production");
-    //     }
-    //     $this->pull($source, $destination);
-    //     $this->findReplace($source, $destination);
-    // }
 }
 
 // Tasks
