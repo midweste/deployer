@@ -14,19 +14,20 @@ use Deployer\Exception\RunException;
 /* ----------------- Helper Functions ----------------- */
 
 /**
- * Which ran locally
+ * Copy of which but ran contextually (local or remote) on given host
  *
  * @param string $name
+ * @param Host $host
  * @return string
  */
-function whichLocal(string $name): string
+function whichContextual(string $name, Host $host): string
 {
     $nameEscaped = escapeshellarg($name);
 
     // Try `command`, should cover all Bourne-like shells
     // Try `which`, should cover most other cases
     // Fallback to `type` command, if the rest fails
-    $path = runLocally("command -v $nameEscaped || which $nameEscaped || type -p $nameEscaped");
+    $path = runOnHost($host, "command -v $nameEscaped || which $nameEscaped || type -p $nameEscaped", ['debug' => false, 'verbose' => false]);
     if (empty($path)) {
         throw new \RuntimeException("Can't locate [$nameEscaped] - neither of [command|which|type] commands are available");
     }
@@ -36,14 +37,23 @@ function whichLocal(string $name): string
 }
 
 /**
- * Copy of which but ran contextually (local or remote)
+ * Which ran locally
  *
  * @param string $name
  * @return string
  */
-function whichContextual(string $name, Host $host): string
+function whichLocal(string $name): string
 {
-    return ($host instanceof Localhost) ? whichLocal($name) : which($name);
+    return whichContextual($name, hostLocalhost());
+}
+
+function sshPrefix(Host $host, Host $runOnHost, string $command): string
+{
+    if (!$host->get('mysql_ssh', false)) {
+        return $command;
+    }
+    $command = str_replace("'", "\'", $command);
+    return sprintf('%s %s \'%s\'', whichContextual('ssh', $runOnHost), $host->connectionString(), $command);
 }
 
 /**
@@ -104,11 +114,20 @@ function runOnHost(Host $host, string $command, ?array $options = [], ?int $time
             $command = ". $dotenv; $command";
         }
 
-        $output = $host->getRemoteUser() . '@' . $host->getHostname() . '$ ' . $command;
-        if (get('verbose', false) || get('debug', false)) {
-            info($output);
+        $output = '[' . $host->getRemoteUser() . '@' . $host->getHostname() . '] ' . $command;
+        $debug = get('debug', false);
+        if (isset($options['debug']) && $options['debug'] === false) {
+            $debug = false;
         }
-        if (get('debug', false) === false) {
+        $verbose = get('verbose', false);
+        if (isset($options['verbose']) && $options['verbose'] === false) {
+            $verbose = false;
+        }
+
+        if ($debug || $verbose) {
+            writeln($output);
+        }
+        if ($debug === false) {
             if ($host instanceof Localhost) {
                 $process = Deployer::get()->processRunner;
                 $output = $process->run($host, $command, $options);
@@ -141,6 +160,11 @@ function runOnHost(Host $host, string $command, ?array $options = [], ?int $time
     } else {
         return $run($command, $options);
     }
+}
+
+function hosts(): HostCollection
+{
+    return Deployer::get()->hosts;
 }
 
 function hostFromAlias(string $alias): Host
@@ -185,20 +209,32 @@ function hostLocalhost(): Host
     throw new \RuntimeException("Localhost is not defined");
 }
 
+function hostIsLocalhost(Host $host): bool
+{
+    return ($host instanceof Localhost) ? true : false;
+}
+
 function hostHasLabel(Host $host, string $label): bool
 {
     $labels = $host->getLabels();
     return (isset($labels[$label])) ? true : false;
 }
 
-function hostIsLocalhost(Host $host): bool
+function hostIsProduction(Host $host): bool
 {
-    return ($host instanceof Localhost) ? true : false;
-}
+    if ($host->getAlias() == 'production') {
+        return true;
+    }
 
-function hosts(): HostCollection
-{
-    return Deployer::get()->hosts;
+    if ($host->get('production', false) === true) {
+        return true;
+    }
+
+    if ($host->get('branch', null) == 'production') {
+        return true;
+    }
+
+    return false;
 }
 
 function hostsAreRemote(Host $host1, Host $host2): bool
