@@ -42,29 +42,34 @@ class FileTransfer
         $excludes = '';
         if (!empty($rsyncExcludes)) {
             foreach ($rsyncExcludes as $exclude) {
-                $excludes .= sprintf(' --exclude "%s"', $exclude);
+                $excludes .= sprintf(' --exclude "%s"', escapeshellarg($exclude));
             }
         }
 
         // source
-        $sourceUri = $source->getRemoteUser() . '@' . $source->getHostname() . ':' . parse($sourcePath);
+        $sourcePath = '"' . parse($sourcePath) . '"';
+        $sourceUri = $source->getRemoteUser() . '@' . $source->getHostname() . ':' . $sourcePath;
         if (!is_null($source->getPort())) {
             $sourceUri = '-e "ssh -p ' . $source->getPort() . '" ' . $sourceUri;
         }
-        if ($source instanceof Localhost || hostsOnSameServer($source, $destination)) {
-            $sourceUri = parse($sourcePath);
+        if ($source instanceof Localhost || hostsOnSameServer($source, $destination) || hostsAreRemote($source, $destination)) {
+            $sourceUri = $sourcePath;
         }
 
         // destination
-        $destinationUri = $destination->getRemoteUser() . '@' . $destination->getHostname() . ':' . parse($destinationPath);
+        $destinationPath = '"' . parse($destinationPath) . '"';
+        $destinationUri = $destination->getRemoteUser() . '@' . $destination->getHostname() . ':' . $destinationPath;
         if (!is_null($destination->getPort())) {
             $destinationUri = '-e "ssh -p ' . $destination->getPort() . '" ' . $destinationUri;
         }
         if ($destination instanceof Localhost || hostsOnSameServer($source, $destination)) {
-            $destinationUri = parse($destinationPath);
+            $destinationUri = $destinationPath;
         }
 
         $command = "$rsync $switches $excludes $sourceUri $destinationUri";
+        if (hostsAreRemote($source, $destination)) {
+            $command = sprintf("%s -A %s %s", whichLocal('ssh'), $source->connectionString(), escapeshellarg($command));
+        }
         return $command;
     }
 
