@@ -12,6 +12,10 @@ require 'contrib/wordpresscli.php';
 - `wpcli_webroot`, Path of the root website folder relative to the site root. Defaults to ''
 - `wpcli_domain`, Domain name of wordpress site for use with wp cli
 - `bin/wp`, Path to wordpress cli executable
+- `wpcli_dir_permissions`, Permission to set directorys to when hardening. Defaults to u=rwx,g=rx,o=rx
+- `wpcli_file_permissions` Permission to set files to when hardening. Defaults to u=rw,g=r,o=r
+- `wpcli_uploads_dir_permissions`, Permission to set directorys to when hardening. Defaults to u=rwx,g=rwx,o=rx
+- `wpcli_uploads_file_permissions` Permission to set files to when hardening. Defaults to u=rw,g=rw,o=r
 ## Usage
 
 Wordpress cli tasks.  Currently only wp
@@ -29,6 +33,12 @@ use Deployer\Host\Localhost;
 use Symfony\Component\Console\Input\InputOption;
 
 option('command', null, InputOption::VALUE_REQUIRED, 'Command to execute via wp cli');
+
+set('wpcli_dir_permissions', 'u=rwx,g=rx,o=rx');
+set('wpcli_file_permissions', 'u=rw,g=r,o=r');
+set('wpcli_uploads_dir_permissions', 'u=rwx,g=rwx,o=rx');
+set('wpcli_uploads_file_permissions', 'u=rw,g=rw,o=r');
+set('wpcli_uploads_dirs', ['wp-content/uploads']);
 
 class WordpressCli
 {
@@ -48,9 +58,9 @@ class WordpressCli
         if (empty($rootPath)) {
             return '';
         }
-
-        $option = sprintf('--path="%s"', $rootPath);
-        return $option;
+        return $rootPath;
+        // $option = sprintf('--path="%s"', $rootPath);
+        // return $option;
     }
 
     protected function url(): string
@@ -60,8 +70,9 @@ class WordpressCli
         if (empty($url)) {
             return '';
         }
-        $option = sprintf('--url="%s"', $url);
-        return $option;
+        return $url;
+        // $option = sprintf('--url="%s"', $url);
+        // return $option;
     }
 
     public function cacheWarmCommand(): string
@@ -96,8 +107,139 @@ class WordpressCli
     {
         $host = $this->host;
         $wp = whichContextual('wp', $host);
-        $command = sprintf('%s %s %s %s', $wp, $command,  $this->sitePath($host), $this->url($host));
+        $command = sprintf('%s %s --path="%s" --url="%s"', $wp, $command,  $this->sitePath($host), $this->url($host));
         return $command;
+    }
+
+    /* ----- Permissions ----- */
+    public function chmodFilesCommand(string $path, string $filePerms = 'u=rw,g=r,o=r', array $excludes = []): string
+    {
+        $find = which('find');
+        $test = which('test');
+        $chmod = which('chmod');
+
+        $exclude = '';
+        if (!empty($excludes)) {
+            $excludes = array_map(function ($dir) use ($path) {
+                return sprintf('"%s/%s"', $path, $dir);
+            }, $excludes);
+            $exclude = '\( -path ';
+            $exclude .= implode(' -o -path ', $excludes);
+            $exclude .= ' \) -prune -o';
+        }
+
+        //$command = "$test -d $path/. && $find $path $exclude -type f -exec $chmod $filePerms '{}' \;";
+        $command = sprintf('%s -d "%s/." && %s -L "%s" %s -type f -exec %s %s \'{}\' \;', $test, $path, $find, $path, $exclude, $chmod, $filePerms);
+        return $command;
+    }
+
+    public function chmodDirectoryCommand(string $path, string $directoryPerms = 'u=rwx,g=rx,o=rx', array $excludes = []): string
+    {
+        $test = which('test');
+        $find = which('find');
+        $chmod = which('chmod');
+
+        $exclude = '';
+        if (!empty($excludes)) {
+            $excludes = array_map(function ($dir) use ($path) {
+                return sprintf('"%s/%s"', $path, $dir);
+            }, $excludes);
+            $exclude = '\( -path ';
+            $exclude .= implode(' -o -path ', $excludes);
+            $exclude .= ' \) -prune -o';
+        }
+
+        $command = "$test -d $path && $find $path $exclude -type d -exec $chmod $directoryPerms '{}' \;";
+        $command = sprintf('%s -d "%s/." && %s -L "%s" %s -type d -exec %s %s \'{}\' \;', $test, $path, $find, $path, $exclude, $chmod, $directoryPerms);
+        return $command;
+    }
+
+    protected function validateWordpress(): void
+    {
+        $user = get('http_user', false);
+        if (!$user) {
+            throw error('http_user is not set');
+        }
+        $path = $this->sitePath();
+        if (!test(sprintf('[ -d "%s" ]', $path))) {
+            throw error('Wordpress path not found');
+        }
+        if (!test(sprintf('[ -f "%s/wp-config.php" ] || [ -d "%s/wp-content" ] || [ -f "%s/wp-login.php" ]', $path, $path, $path))) {
+            throw error(sprintf('Path "%s" does not seem like a wordpress directory', $path));
+        }
+    }
+
+    public function resetSourcePermissions(): void
+    {
+        $this->validateWordpress();
+
+        $runOptions = ['timeout' => 0, 'idle_timeout' => 0];
+
+        $user = get('http_user', false);
+        $path = $this->sitePath();
+        $dirPerms = get('wpcli_dir_permissions', 'u=rwx,g=rx,o=rx');
+        $filePerms = get('wpcli_file_permissions', 'u=rw,g=r,o=r');
+        $wpUploadsDirs = get('wpcli_uploads_dirs', ['wp-content/uploads', 'wp-content/uploads-hcm']);
+
+        info(sprintf('Setting permissions for %s', $path));
+
+        // chown
+        runOnHost($this->host, sprintf('%s -R %s:%s "%s"', which('chown'), $user, $user, $path), $runOptions);
+        info(sprintf('Changed owner of %s to %s:%s', $path, $user, $user));
+
+        // remove acls
+        try {
+            $setafcl = which('setfacl');
+            runOnHost($this->host, sprintf('%s -R -b "%s"', $setafcl, $path), $runOptions);
+            info('Removed ACLs');
+        } catch (\Throwable $e) {
+            warning('setfacl not found. Skipping ACL removal');
+        }
+
+        // chmod dirs
+        runOnHost($this->host, $this->chmodDirectoryCommand($path, $dirPerms, $wpUploadsDirs), $runOptions);
+        info(sprintf('Changed permissions of %s directories to %s', $path, $dirPerms));
+
+        // chmod files
+        runOnHost($this->host, $this->chmodFilesCommand($path, $filePerms, $wpUploadsDirs), $runOptions);
+        info(sprintf('Changed permissions of %s site files to %s', $path, $filePerms));
+
+        // chmod wp-config.php
+        $wpConfigPath = sprintf('%s/wp-config.php', $path);
+        runOnHost($this->host, sprintf('%s u=r "%s"', which('chmod'), $wpConfigPath), $runOptions);
+        info(sprintf('Changed permissions of %s to u=r', $wpConfigPath));
+
+        info('Source permissions set');
+    }
+
+    public function resetUploadsPermissions(): void
+    {
+        $this->validateWordpress();
+
+        $path = $this->sitePath();
+        $runOptions = ['timeout' => 0, 'idle_timeout' => 0];
+        $wpUploadsDirs = get('wpcli_uploads_dirs', ['wp-content/uploads', 'wp-content/uploads-hcm']);
+        if (empty($wpUploadsDirs)) {
+            warning('No uploads directories set');
+            return;
+        }
+
+        // chmod uploads dirs
+        foreach ($wpUploadsDirs as $dir) {
+            $uploads = $path . '/' . $dir;
+            if (test(sprintf('[ -d "%s" ]', $uploads))) {
+                $dirUploadsPerms = get('wpcli_uploads_dir_permissions', 'u=rwx,g=rwx,o=rx');
+                runOnHost($this->host, $this->chmodDirectoryCommand($uploads, $dirUploadsPerms), $runOptions);
+                info(sprintf('Changed permissions of %s directories to %s', $uploads, $dirUploadsPerms));
+
+                $fileUploadsPerms = get('wpcli_uploads_file_permissions', 'u=rw,g=rw,o=r');
+                runOnHost($this->host, $this->chmodFilesCommand($uploads, $fileUploadsPerms), $runOptions);
+                info(sprintf('Changed permissions of %s files to %s', $uploads, $fileUploadsPerms));
+            } else {
+                warning(sprintf('Upload directory %s not found', $uploads));
+            }
+        }
+        info('Upload permissions set');
     }
 }
 
@@ -139,3 +281,18 @@ task('wp:flushall', function () {
     invoke('wp:transient:flush');
     invoke('wp:cache:flush');
 })->desc('Purge the transients, wp cache');
+
+task('wp:perms:reset-source', function () {
+    $wpcli = new WordpressCli(currentHost());
+    $wpcli->resetSourcePermissions();
+})->desc('Sets wordpress source file/directory permissions');
+
+task('wp:perms:reset-uploads', function () {
+    $wpcli = new WordpressCli(currentHost());
+    $wpcli->resetUploadsPermissions();
+})->desc('Sets wordpress uploads file/directory permissions');
+
+task('wp:perms:reset', function () {
+    invoke('wp:perms:reset-source');
+    invoke('wp:perms:reset-uploads');
+})->desc('Sets wordpress source & uploads file/directory permissions');
