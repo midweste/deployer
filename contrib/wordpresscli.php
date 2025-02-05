@@ -244,31 +244,44 @@ class WordpressCli
         info('Upload permissions set');
     }
 
-    public function multisiteBlogs(string $dbHost, string $dbName, string $dbUser, string $dbPass, string $dbPort = '3306'): array
+    protected function mysqlQuery(string $query, string $dbHost, string $dbName, string $dbUser, string $dbPass, int $dbPort = 3306)
     {
-        $this->validateWordpress();
-
-        $blogs = [];
-
-        $prefix = $this->host->get('wpcli_db_prefix', 'wp_');
-        $mysql = which('mysql');
-        $command = sprintf(
-            '%s --host=%s --user=%s --password=%s --port=%s --database=%s --execute="SELECT blog_id, domain FROM %s;"',
-            $mysql,
+        return run(sprintf(
+            '%s --host=%s --user=%s --password=%s --port=%s --database=%s --execute="%s"',
+            which('mysql'),
             escapeshellarg($dbHost),
             escapeshellarg($dbUser),
             escapeshellarg($dbPass),
             escapeshellarg($dbPort),
             escapeshellarg($dbName),
-            $prefix . 'blogs'
-        );
+            $query
+        ));
+    }
 
-        $output = run($command);
-        $lines = explode("\n", trim($output));
-        foreach ($lines as $line) {
-            if (preg_match('/(\d+)\s+(.+)/', $line, $matches)) {
-                $blogs[trim($matches[1])] = trim($matches[2]);
+    public function multisiteBlogs(string $dbHost, string $dbName, string $dbUser, string $dbPass, int $dbPort = 3306): array
+    {
+        $this->validateWordpress();
+
+        $blogs = [];
+        $prefix = $this->host->get('wpcli_db_prefix', 'wp_');
+        $blogTable = $prefix . 'blogs';
+
+        try {
+            $this->mysqlQuery(sprintf('SELECT 1 FROM %s LIMIT 1;', $blogTable), $dbHost, $dbName, $dbUser, $dbPass, $dbPort);
+        } catch (\Throwable $e) {
+            return $blogs;
+        }
+
+        try {
+            $output = $this->mysqlQuery(sprintf('SELECT blog_id, domain FROM %s;', $blogTable), $dbHost, $dbName, $dbUser, $dbPass, $dbPort);
+            $lines = explode("\n", trim($output));
+            foreach ($lines as $line) {
+                if (preg_match('/(\d+)\s+(.+)/', $line, $matches)) {
+                    $blogs[trim($matches[1])] = trim($matches[2]);
+                }
             }
+        } catch (\Throwable $e) {
+            info('Error occurred: ' . $e->getMessage());
         }
         return $blogs;
     }

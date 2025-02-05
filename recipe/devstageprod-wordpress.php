@@ -93,7 +93,7 @@ task('db:replace', function () {
     $dbName = $host->get('mysql_name');
     $dbUser = $host->get('mysql_user');
     $dbPass = $host->get('mysql_pass');
-    $dbPort = $host->get('mysql_port');
+    $dbPort = $host->get('mysql_port', 3306);
     $blogs = $wpcli->multisiteBlogs($dbHost, $dbName, $dbUser, $dbPass, $dbPort);
     if (empty($blogs)) {
         return;
@@ -113,8 +113,7 @@ task('db:replace', function () {
         $mysql->findReplace($host, $localhost);
     }
 
-    // cleanup and restore the original values
-    info('Restoring original mysql_domain values: host=' . $hostMysqlDomain . ' and localhost=' . $localhostMysqlDomain);
+    // restore the original values
     $host->set('mysql_domain', $hostMysqlDomain);
     $localhost->set('mysql_domain', $localhostMysqlDomain);
 })->desc('Replace the host domain with the localhost domain in the local database');
