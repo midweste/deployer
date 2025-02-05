@@ -6,23 +6,11 @@ require_once __DIR__ . '/common.php';
 
 require_once __DIR__ . '/../contrib/clearserverpaths.php';
 require_once __DIR__ . '/../contrib/filetransfer.php';
-require_once __DIR__ . '/../contrib/hardening.php';
 require_once __DIR__ . '/../contrib/mysql.php';
-require_once __DIR__ . '/../contrib/wordpresscli.php';
 require_once __DIR__ . '/../contrib/git.php';
 
 add('recipes', ['devstageprod']);
 
-/**
- * Wordpress configuration
- */
-set('shared_dirs', ['wp-content/uploads']);
-set('writable_dirs', ['wp-content/uploads']);
-
-/* ----------------- filesharden ----------------- */
-// for task 'deploy:harden'
-set('harden_dir_permissions', 'u=rx,g=rx,o=rx');
-set('harden_file_permissions', 'u=r,g=r,o=r');
 /* ----------------- clear_server_paths ----------------- */
 set('clear_server_paths', []);
 
@@ -58,7 +46,6 @@ task('deploy', [
     'deploy:prepare',
     'deploy:vendors',
     'deploy:clear_paths',
-    'deploy:harden',
     'deploy:publish',
 ])->desc('Deploys your project');
 
@@ -69,20 +56,6 @@ after('deploy:symlink', 'deploy:clear_server_paths');
 
 /* ----------------- git ----------------- */
 after('deploy:publish', 'git:tag');
-
-/* ----------------- hardening ----------------- */
-before('deploy:cleanup', function () {
-    invoke('deploy:unharden');
-})->desc('Unharden previous site releases');
-
-after('deploy:harden', function () {
-    invoke('deploy:writablehardened');
-})->desc('Apply writable permissions to files/folders in harden_writable_files');
-
-after('deploy:failed', function () {
-    invoke('deploy:unlock');
-    invoke('deploy:unharden');
-})->desc('Unlock after deploy:failed and unharded failed release');
 
 /* ----------------- staging ----------------- */
 task('pull-all', [
@@ -110,41 +83,3 @@ task('staging:pull-all', [
     'staging:db:pull-replace',
     'staging:files:pull',
 ])->desc('Copy writable directories from production to staging and truncate staging db, pull db from a production, find/replace production with staging domain');
-
-/* ----------------- wordpresscli ----------------- */
-after('deploy:publish', 'wp:cache:flush');
-
-after('files:pull', function () {
-    $host = hostLocalhost();
-    $wpcli = new WordpressCli($host);
-    $command = $wpcli->command('cache flush');
-    runOnHost($host, $command);
-});
-
-after('db:pull', function () {
-    $host = hostLocalhost();
-    $wpcli = new WordpressCli($host);
-    $command = $wpcli->command('cache flush');
-    runOnHost($host, $command);
-});
-
-after('db:pull-replace', function () {
-    $host = hostLocalhost();
-    $wpcli = new WordpressCli($host);
-    $command = $wpcli->command('cache flush');
-    runOnHost($host, $command);
-});
-
-after('staging:files:pull', function () {
-    $host = hostFromStage('staging');
-    $wpcli = new WordpressCli($host);
-    $command = $wpcli->command('cache flush');
-    runOnHost($host, $command);
-});
-
-after('staging:db:pull-replace', function () {
-    $host = hostFromStage('staging');
-    $wpcli = new WordpressCli($host);
-    $command = $wpcli->command('cache flush');
-    runOnHost($host, $command);
-});

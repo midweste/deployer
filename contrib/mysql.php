@@ -284,8 +284,7 @@ task('db:replace', function () {
     $mysql->findReplace(currentHost(), hostLocalhost());
 })->desc('Replace the host domain with the localhost domain in the local database');
 
-task('db:pull-replace', function () {
-    $mysql = new Mysql();
-    $mysql->pull(currentHost(), hostLocalhost());
-    $mysql->findReplace(currentHost(), hostLocalhost());
-})->desc('Pull db from a remote host to localhost using mysqldump and replace the host domain with the localhost domain in the local database');
+task('db:pull-replace', [
+    'db:pull',
+    'db:replace',
+])->desc('Pull db from a remote host to localhost using mysqldump and replace the host domain with the localhost domain in the local database');

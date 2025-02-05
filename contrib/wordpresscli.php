@@ -16,6 +16,7 @@ require 'contrib/wordpresscli.php';
 - `wpcli_file_permissions` Permission to set files to when hardening. Defaults to u=rw,g=r,o=r
 - `wpcli_uploads_dir_permissions`, Permission to set directorys to when hardening. Defaults to u=rwx,g=rwx,o=rx
 - `wpcli_uploads_file_permissions` Permission to set files to when hardening. Defaults to u=rw,g=rw,o=r
+- `wpcli_db_prefix`, Database table prefix. Defaults to 'wp_'
 ## Usage
 
 Wordpress cli tasks.  Currently only wp
@@ -39,6 +40,7 @@ set('wpcli_file_permissions', 'u=rw,g=r,o=r');
 set('wpcli_uploads_dir_permissions', 'u=rwx,g=rwx,o=rx');
 set('wpcli_uploads_file_permissions', 'u=rw,g=rw,o=r');
 set('wpcli_uploads_dirs', ['wp-content/uploads']);
+set('wpcli_db_prefix', 'wp_');
 
 class WordpressCli
 {
@@ -240,6 +242,35 @@ class WordpressCli
             }
         }
         info('Upload permissions set');
+    }
+
+    public function multisiteBlogs(string $dbHost, string $dbName, string $dbUser, string $dbPass, string $dbPort = '3306'): array
+    {
+        $this->validateWordpress();
+
+        $blogs = [];
+
+        $prefix = $this->host->get('wpcli_db_prefix', 'wp_');
+        $mysql = which('mysql');
+        $command = sprintf(
+            '%s --host=%s --user=%s --password=%s --port=%s --database=%s --execute="SELECT blog_id, domain FROM %s;"',
+            $mysql,
+            escapeshellarg($dbHost),
+            escapeshellarg($dbUser),
+            escapeshellarg($dbPass),
+            escapeshellarg($dbPort),
+            escapeshellarg($dbName),
+            $prefix . 'blogs'
+        );
+
+        $output = run($command);
+        $lines = explode("\n", trim($output));
+        foreach ($lines as $line) {
+            if (preg_match('/(\d+)\s+(.+)/', $line, $matches)) {
+                $blogs[trim($matches[1])] = trim($matches[2]);
+            }
+        }
+        return $blogs;
     }
 }
 
