@@ -108,8 +108,43 @@ class FileTransfer
             runOnHost(hostLocalhost(), $rsyncCommand, ['real_time_output' => false, 'timeout' => 0, 'idle_timeout' => 0]);
         }
     }
+    public function pullCode(Host $source, Host $destination): void
+    {
+        if (hostsAreSame($source, $destination)) {
+            throw error("Hosts source and destination cannot be the same host when pulling files");
+        }
+        if (hostIsLocalhost($source)) {
+            throw error("Source host cannot be localhost");
+        }
+        if (hostIsProduction($destination)) {
+            throw error("Destination host cannot be production");
+        }
+        $destAbsPath = hostCurrentDir($destination);
+        $destSubfolder = get('filetransfer_local_path', '');
+        if (!empty($destSubfolder)) {
+            $destAbsPath .= '/' . parse($destSubfolder);
+        }
+        $destAbsPath = rtrim($destAbsPath, '/') . '/';
+        $sourceAbsPath = hostCurrentDir($source);
+        $sourceSubfolder = get('filetransfer_remote_path', '');
+        if (!empty($sourceSubfolder)) {
+            $sourceAbsPath .= '/' . parse($sourceSubfolder);
+        }
+        $sourceAbsPath = rtrim($sourceAbsPath, '/') . '/*';
+        if (test('[ ! -d ' . $sourceAbsPath . ' ]')) {
+            warning($sourceAbsPath . ' does not exist on source.');
+            return;
+        }
+        $rsyncCommand = $this->rsyncCommand($source, $sourceAbsPath, $destination, $destAbsPath);
+        writeln($rsyncCommand);
+        runOnHost(hostLocalhost(), $rsyncCommand, ['real_time_output' => true, 'timeout' => 0, 'idle_timeout' => 0]);
+    }
 }
 
+task('files:code:pull', function () {
+    $server = new FileTransfer();
+    $server->pullCode(currentHost(), hostLocalhost());
+})->desc('Downloads shared writable folders to the localhost');
 task('files:pull', function () {
     $server = new FileTransfer();
     $server->pullSharedWritable(currentHost(), hostLocalhost());

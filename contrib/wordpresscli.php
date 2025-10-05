@@ -285,6 +285,21 @@ class WordpressCli
         }
         return $blogs;
     }
+    public function tables(string $dbHost, string $dbName, string $dbUser, string $dbPass, int $dbPort = 3306): array
+    {
+        $this->validateWordpress();
+        $tables = [];
+        try {
+            $output = $this->mysqlQuery('SHOW TABLES;', $dbHost, $dbName, $dbUser, $dbPass, $dbPort);
+            $lines = explode("\n", trim($output));
+            foreach ($lines as $line) {
+                $tables[] = trim($line);
+            }
+        } catch (\Throwable $e) {
+            info('Error occurred: ' . $e->getMessage());
+        }
+        return $tables;
+    }
 }
 
 task('wp', function () {
@@ -293,7 +308,7 @@ task('wp', function () {
     }
 
     $wpcli = new WordpressCli(currentHost());
-    $command = $wpcli->command(input()->getOption('wp'));
+    $command = $wpcli->command(input()->getOption('command'));
     run($command, ['real_time_output' => true]);
 })->desc('Run a wp cli command');
 
